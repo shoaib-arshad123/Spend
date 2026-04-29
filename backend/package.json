@@ -1,0 +1,27 @@
+{
+  "name": "expense-tracker-backend",
+  "version": "1.0.0",
+  "description": "Expense Tracker Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.0",
+    "mssql": "^9.3.2"
+  },
+  "keywords": [
+    "expense",
+    "tracker",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT"
+}
