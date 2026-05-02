@@ -14,7 +14,10 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
+    "express-rate-limit": "^8.4.1",
+    "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.0",
+    "msnodesqlv8": "^5.1.9",
     "mssql": "^9.3.2"
   },
   "keywords": [

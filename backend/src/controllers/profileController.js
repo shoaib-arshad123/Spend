@@ -4,7 +4,7 @@ export const getProfile = async (req, res) => {
   try {
     const result = await pool.request()
       .input('id', req.userId)
-      .query('SELECT id, name, email, budget, language, theme, createdAt FROM users WHERE id = @id');
+      .query('SELECT id, name, email, budget, language, theme, avatar, photo, createdAt FROM users WHERE id = @id');
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -19,7 +19,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, language, theme, budget } = req.body;
+    const { name, language, theme, budget, avatar, photo } = req.body;
     const request = pool.request().input('id', req.userId);
 
     const updateFields = [];
@@ -27,6 +27,8 @@ export const updateProfile = async (req, res) => {
     if (language !== undefined) { updateFields.push('language = @language'); request.input('language', language); }
     if (theme !== undefined) { updateFields.push('theme = @theme'); request.input('theme', theme); }
     if (budget !== undefined) { updateFields.push('budget = @budget'); request.input('budget', budget); }
+    if (avatar !== undefined) { updateFields.push('avatar = @avatar'); request.input('avatar', avatar); }
+    if (photo !== undefined) { updateFields.push('photo = @photo'); request.input('photo', photo); }
 
     if (updateFields.length === 0) {
       return res.status(400).json({ success: false, message: 'No fields to update' });
@@ -36,7 +38,7 @@ export const updateProfile = async (req, res) => {
 
     const result = await pool.request()
       .input('id', req.userId)
-      .query('SELECT id, name, email, budget, language, theme FROM users WHERE id = @id');
+      .query('SELECT id, name, email, budget, language, theme, avatar, photo FROM users WHERE id = @id');
 
     res.json({ success: true, message: 'Profile updated successfully', user: result.recordset[0] });
   } catch (error) {

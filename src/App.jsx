@@ -15,7 +15,6 @@ function AppRouter() {
     return (
       <>
         <MainApp />
-        <ToastContainer />
         <AnimatePresence>
           {showOnboarding && <OnboardingTutorial />}
         </AnimatePresence>
@@ -42,7 +41,6 @@ function AppRouter() {
           </motion.div>
         )}
       </AnimatePresence>
-      <ToastContainer />
     </>
   );
 }

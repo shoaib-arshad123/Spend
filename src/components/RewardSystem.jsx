@@ -1,26 +1,33 @@
 import { motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import { classifyUser, formatPKR } from "../utils/helpers";
 import { useApp } from "../context/AppContext";
 
 const BADGES = [
-  { id:"first",    icon:"🌟", title:"First Step",      desc:"Added your first expense",              unlocked:e=>e.length>=1 },
-  { id:"five",     icon:"📊", title:"Data Tracker",    desc:"Tracked 5+ expenses",                   unlocked:e=>e.length>=5 },
-  { id:"ten",      icon:"🔥", title:"On Fire!",         desc:"Tracked 10+ expenses",                  unlocked:e=>e.length>=10 },
-  { id:"twenty",   icon:"💪", title:"Dedicated",       desc:"Tracked 20+ expenses",                  unlocked:e=>e.length>=20 },
-  { id:"saver",    icon:"💰", title:"Smart Saver",     desc:"Stayed under 60% of budget",            unlocked:(e,b)=>b>0&&e.reduce((s,x)=>s+x.amount,0)/b<0.6 },
-  { id:"variety",  icon:"🎨", title:"Well Rounded",    desc:"Used 4+ spending categories",           unlocked:e=>new Set(e.map(x=>x.category)).size>=4 },
-  { id:"scanner",  icon:"📸", title:"Tech Savvy",      desc:"Scanned a bill receipt",                unlocked:e=>e.some(x=>x.source==="scanner") },
-  { id:"voice",    icon:"🎙️", title:"Hands-Free",      desc:"Used voice to add expense",             unlocked:e=>e.some(x=>x.source==="voice") },
-  { id:"books",    icon:"📚", title:"Scholar",         desc:"Tracked a book/stationery expense",     unlocked:e=>e.some(x=>x.category==="books") },
-  { id:"health",   icon:"💊", title:"Health Aware",    desc:"Tracked a health expense",              unlocked:e=>e.some(x=>x.category==="health") },
-  { id:"mindful",  icon:"🥗", title:"Mindful Spender", desc:"Food < 40% of total spending",          unlocked:e=>{ const t=e.reduce((s,x)=>s+x.amount,0); const f=e.filter(x=>x.category==="food").reduce((s,x)=>s+x.amount,0); return t>0&&f/t<0.4; } },
-  { id:"streak7",  icon:"🗓️", title:"Week Warrior",    desc:"Tracked expenses for 7 consecutive days", unlocked:e=>streak(e)>=7 },
+  { id:"first",    icon:"🌟", title:"First Step",      desc:"Added your first expense",              unlocked:e=>e.length>=1, task:"Add at least 1 expense" },
+  { id:"five",     icon:"📊", title:"Data Tracker",    desc:"Tracked 5+ expenses",                   unlocked:e=>e.length>=5, task:"Add 5 expenses", progress:e=>Math.min(e.length, 5)/5 },
+  { id:"ten",      icon:"🔥", title:"On Fire!",         desc:"Tracked 10+ expenses",                  unlocked:e=>e.length>=10, task:"Add 10 expenses", progress:e=>Math.min(e.length, 10)/10 },
+  { id:"twenty",   icon:"💪", title:"Dedicated",       desc:"Tracked 20+ expenses",                  unlocked:e=>e.length>=20, task:"Add 20 expenses", progress:e=>Math.min(e.length, 20)/20 },
+  { id:"saver",    icon:"💰", title:"Smart Saver",     desc:"Stayed under 60% of budget",            unlocked:(e,b)=>b>0&&e.reduce((s,x)=>s+x.amount,0)/b<0.6, task:"Spend less than 60% of budget" },
+  { id:"variety",  icon:"🎨", title:"Well Rounded",    desc:"Used 4+ spending categories",           unlocked:e=>new Set(e.map(x=>x.category?.toLowerCase())).size>=4, task:"Use 4 different categories", progress:e=>Math.min(new Set(e.map(x=>x.category?.toLowerCase())).size, 4)/4 },
+  { id:"scanner",  icon:"📸", title:"Tech Savvy",      desc:"Scanned a bill receipt",                unlocked:e=>e.some(x=>x.source==="scanner"), task:"Use the Bill Scanner once" },
+  { id:"voice",    icon:"🎙️", title:"Hands-Free",      desc:"Used voice to add expense",             unlocked:e=>e.some(x=>x.source==="voice"), task:"Add an expense via Voice" },
+  { id:"books",    icon:"📚", title:"Scholar",         desc:"Tracked a book/stationery expense",     unlocked:e=>e.some(x=>x.category?.toLowerCase().includes("book") || x.category?.toLowerCase().includes("edu")), task:"Track an Education/Book expense" },
+  { id:"health",   icon:"💊", title:"Health Aware",    desc:"Tracked a health expense",              unlocked:e=>e.some(x=>x.category?.toLowerCase().includes("health") || x.category?.toLowerCase().includes("med")), task:"Track a Health/Medicine expense" },
+  { id:"mindful",  icon:"🥗", title:"Mindful Spender", desc:"Food < 40% of total spending",          unlocked:e=>{ const t=e.reduce((s,x)=>s+x.amount,0); const f=e.filter(x=>x.category?.toLowerCase().includes("food")).reduce((s,x)=>s+x.amount,0); return t>0&&f/t<0.4; }, task:"Keep food spending below 40%" },
+  { id:"streak7",  icon:"🗓️", title:"Week Warrior",    desc:"Tracked expenses for 7 consecutive days", unlocked:e=>streak(e)>=7, task:"Maintain a 7-day streak", progress:e=>Math.min(streak(e), 7)/7 },
 ];
 
 function streak(expenses) {
   const dates = new Set(expenses.map(e=>e.date));
   let s=0;
-  for (let i=0;i<30;i++) { const d=new Date(); d.setDate(d.getDate()-i); if(dates.has(d.toISOString().slice(0,10))) s++; else if(i>0) break; }
+  for (let i=0;i<30;i++) { 
+    const d=new Date(); 
+    d.setDate(d.getDate()-i); 
+    const ds = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+    if(dates.has(ds)) s++; 
+    else if(i>0) break; 
+  }
   return s;
 }
 
@@ -30,7 +37,7 @@ const TYPE_CONFIG = {
   spender: { label:"🔴 High Spender", color:"var(--red)",    bg:"var(--red-bg)",     message:"You've been spending heavily. Try cutting your top categories.", next:"Bring spending below 85% of budget to become Balanced." },
 };
 
-export default function RewardSystem({ t, expenses, budget }) {
+export default function RewardSystem({ t, expenses, budget, setActiveTab }) {
   const totalSpent = expenses.reduce((s,e)=>s+e.amount,0);
   const userType   = classifyUser(totalSpent, budget);
   const currentStreak = streak(expenses);
@@ -41,6 +48,19 @@ export default function RewardSystem({ t, expenses, budget }) {
 
   return (
     <div style={RW.container}>
+      {/* Header with Back */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:4 }}>
+        <motion.button 
+          style={RW.backCircle} 
+          onClick={() => setActiveTab("dashboard")}
+          whileHover={{ scale:1.1, background:"var(--bg-elevated)" }}
+          whileTap={{ scale:0.9 }}
+        >
+          <ChevronLeft size={20} color="var(--text-secondary)" />
+        </motion.button>
+        <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)" }}>Rewards & Badges</h2>
+      </div>
+
       {/* Profile classification card */}
       <motion.div style={{ ...RW.profileCard, background:tc.bg, border:`1px solid ${tc.color}30` }} initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
@@ -110,15 +130,23 @@ export default function RewardSystem({ t, expenses, budget }) {
         {/* Locked */}
         {locked.length > 0 && (
           <>
-            <p style={{ ...RW.groupLabel, marginTop:16 }}>🔒 Locked ({locked.length})</p>
+            <p style={{ ...RW.groupLabel, marginTop:16 }}>🔒 Available Tasks ({locked.length})</p>
             <div style={RW.badgeGrid}>
-              {locked.map(b => (
-                <div key={b.id} style={{ ...RW.badgeCard, opacity:0.4, filter:"grayscale(1)" }}>
-                  <span style={{ fontSize:30, display:"block", marginBottom:6 }}>{b.icon}</span>
-                  <p style={{ ...RW.badgeTitle, color:"var(--text-muted)" }}>{b.title}</p>
-                  <p style={RW.badgeDesc}>{b.desc}</p>
-                </div>
-              ))}
+              {locked.map(b => {
+                const prog = b.progress ? b.progress(expenses) : 0;
+                return (
+                  <div key={b.id} style={{ ...RW.badgeCard, opacity:0.8, background:"var(--bg-elevated)", border:"1px dashed var(--border)" }}>
+                    <span style={{ fontSize:30, display:"block", marginBottom:6, filter:"grayscale(1)" }}>{b.icon}</span>
+                    <p style={{ ...RW.badgeTitle, color:"var(--text-secondary)" }}>{b.title}</p>
+                    <p style={RW.badgeDesc}>{b.task}</p>
+                    {prog > 0 && (
+                      <div style={{ height:4, background:"var(--border)", borderRadius:2, marginTop:8, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:`${prog*100}%`, background:"var(--accent)" }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -134,6 +162,7 @@ export default function RewardSystem({ t, expenses, budget }) {
           {currentStreak===0 ? "Log an expense every day to build your streak and earn the Week Warrior badge." : `${7-Math.min(currentStreak,7)} more days to earn the Week Warrior badge!`}
         </p>
       </div>
+
     </div>
   );
 }
@@ -153,4 +182,5 @@ const RW = {
   badgeCard:    { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:12, padding:"14px 10px", textAlign:"center" },
   badgeTitle:   { margin:"0 0 4px", fontSize:12, fontWeight:700, color:"var(--text-primary)" },
   badgeDesc:    { margin:0, fontSize:10, color:"var(--text-muted)", lineHeight:1.4 },
+  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
 };

@@ -9,24 +9,56 @@ import SmartAdvice    from "../components/SmartAdvice";
 import RewardSystem   from "../components/RewardSystem";
 import Profile        from "../components/Profile";
 import Analytics      from "../components/Analytics";
+import RecurringExpenses from "../components/RecurringExpenses";
+import SavingsGoals   from "../components/SavingsGoals";
+import CelebrationPopup from "../components/CelebrationPopup";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { classifyUser, formatPKR } from "../utils/helpers";
-import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Globe, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Globe, Bell, LogOut, Repeat, Target, MoreVertical } from "lucide-react";
+
+function SettingsDropdown({ onClose, onToggleTheme, theme, onToggleLang, lang, logout }) {
+  return (
+    <motion.div 
+      initial={{ opacity:0, y:10, scale:0.95 }}
+      animate={{ opacity:1, y:0, scale:1 }}
+      exit={{ opacity:0, y:10, scale:0.95 }}
+      style={ms.dropdown}
+    >
+      <div style={ms.dropdownHeader}>Settings</div>
+      <button style={ms.dropdownItem} onClick={() => { onToggleTheme(); onClose(); }}>
+        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+      </button>
+      <button style={ms.dropdownItem} onClick={() => { onToggleLang(); onClose(); }}>
+        <Globe size={16} />
+        <span>{lang === "en" ? "اردو (Urdu)" : "English"}</span>
+      </button>
+      <div style={{...ms.dropdownHeader, borderTop:"1px solid var(--border)", marginTop:4, paddingTop:8}}>Account</div>
+      <button style={{...ms.dropdownItem, color:"var(--red)"}} onClick={() => { logout(); onClose(); }}>
+        <LogOut size={16} />
+        <span>Log Out</span>
+      </button>
+    </motion.div>
+  );
+}
 
 const NAV = [
   { key:"dashboard",  icon: <LayoutDashboard size={20} />, label:"Dashboard" },
   { key:"analytics",  icon: <PieChartIcon size={20} />, label:"Analytics" },
-  { key:"addExpense", icon: <Plus size={24} />, label:"Add Expense", accent:true },
+  { key:"addExpense", icon: <Plus size={24} />, label:"Add Expense" },
   { key:"history",    icon: <History size={20} />, label:"History" },
-  { key:"advice",     icon: <Lightbulb size={20} />, label:"AI Advice" },
+  { key:"recurring",  icon: <Repeat size={20} />, label:"Subscriptions" },
+  { key:"goals",      icon: <Target size={20} />, label:"Goals" },
+  { key:"advice",     icon: <Lightbulb size={20} />, label:"AI Analysis" },
   { key:"rewards",    icon: <Trophy size={20} />, label:"Rewards" },
   { key:"profile",    icon: <UserIcon size={20} />, label:"Profile" },
 ];
 
 export default function MainApp() {
-  const { user, lang, setLang, expenses, budget, setBudget, addExpense, deleteExpense, unreadCount, theme, toggleTheme, logout } = useApp();
+  const { user, lang, setLang, expenses, monthlyExpenses, budget, setBudget, addExpense, deleteExpense, unreadCount, theme, toggleTheme, logout, celebrationReward, setCelebrationReward } = useApp();
   const [activeTab,   setActiveTab]   = useState("dashboard");
   const [showNotif,   setShowNotif]   = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const t          = translations[lang];
@@ -40,141 +72,81 @@ export default function MainApp() {
     const p = { t, lang, expenses, budget, setBudget, setActiveTab };
     switch(activeTab) {
       case "dashboard":  return <Dashboard {...p} />;
-      case "analytics":  return <Analytics />;
-      case "addExpense": return <AddExpense t={t} lang={lang} onAdd={addExpense} setActiveTab={setActiveTab} />;
-      case "history":    return <ExpenseHistory t={t} lang={lang} expenses={expenses} onDelete={deleteExpense} />;
-      case "advice":     return <SmartAdvice t={t} lang={lang} expenses={expenses} budget={budget} />;
-      case "rewards":    return <RewardSystem t={t} expenses={expenses} budget={budget} />;
-      case "profile":    return <Profile />;
+      case "analytics":  return <Analytics {...p} />;
+      case "addExpense": return <AddExpense {...p} onAdd={addExpense} />;
+      case "history":    return <ExpenseHistory {...p} onDelete={deleteExpense} />;
+      case "recurring":  return <RecurringExpenses {...p} />;
+      case "goals":      return <SavingsGoals {...p} />;
+      case "advice":     return <SmartAdvice {...p} expenses={monthlyExpenses} />;
+      case "rewards":    return <RewardSystem {...p} />;
+      case "profile":    return <Profile {...p} />;
       default: return null;
     }
   };
 
   return (
     <div style={ms.root}>
-      {/* ── SIDEBAR ── */}
-      <>
-        {sidebarOpen && <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={ms.overlay} onClick={() => setSidebarOpen(false)} />}
-        <motion.aside
-          style={ms.sidebar}
-          initial={false}
-          animate={{ x: sidebarOpen ? 0 : -260 }}
-          transition={{ type:"spring", stiffness:300, damping:30 }}
-        >
-          {/* Brand */}
-          <div style={ms.sidebarTop}>
-            <div style={ms.sbLogo}>
-              <img src="/logo.png" alt="SpendSmart" style={{ width:30, height:30, borderRadius:7, objectFit:"cover" }} />
-              <span style={ms.sbBrand}>SpendSmart</span>
-            </div>
-            <button style={ms.sbClose} onClick={() => setSidebarOpen(false)}>
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* User card */}
-          <div style={ms.sbUser}>
-            {user?.photo ? (
-              <img src={user.photo} alt="Avatar" style={{ width:40, height:40, borderRadius:"50%", objectFit:"cover" }} />
-            ) : (
-              <span style={{ fontSize:28 }}>{user?.avatar||"🧑‍💻"}</span>
-            )}
-            <div style={{ flex:1, minWidth:0 }}>
-              <p style={ms.sbUserName}>{user?.name}</p>
-              <p style={ms.sbUserSub}>{budget>0 ? `${formatPKR(Math.max(remaining,0))} left` : "Set budget in Profile"}</p>
-            </div>
-          </div>
-
-          {/* Budget mini-bar */}
-          {budget > 0 && (
-            <div style={ms.sbBudget}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                <span style={{ fontSize:11, color:"var(--text-muted)" }}>Budget used</span>
-                <span style={{ fontSize:11, fontWeight:700, color: pct>=100?"var(--red)":pct>=80?"var(--accent)":"var(--green)" }}>{pct}%</span>
-              </div>
-              <div style={{ height:5, background:"var(--border)", borderRadius:3 }}>
-                <motion.div style={{ height:"100%", borderRadius:3, background: pct>=100?"var(--red)":pct>=80?"#f59e0b":"var(--green)" }}
-                  initial={{ width:0 }} animate={{ width:`${Math.min(pct,100)}%` }} transition={{ duration:0.8 }} />
-              </div>
-            </div>
-          )}
-
-          {/* Nav */}
-          <nav style={ms.sbNav}>
-            {NAV.map(n => (
-              <button
-                key={n.key}
-                style={{ ...ms.sbNavItem, ...(activeTab===n.key ? ms.sbNavActive : {}), ...(n.accent ? ms.sbNavAccent : {}) }}
-                onClick={() => { setActiveTab(n.key); setSidebarOpen(false); }}
-              >
-                <span style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>{n.icon}</span>
-                <span style={{ fontSize:14 }}>{n.label}</span>
-                {n.key==="addExpense" && <span style={ms.addBadge}><Plus size={14} /></span>}
-              </button>
-            ))}
-          </nav>
-
-          {/* Bottom actions */}
-          <div style={ms.sbBottom}>
-            <button style={ms.sbAction} onClick={() => setLang(lang==="en"?"ur":"en")}>
-              <Globe size={16} style={{ marginBottom: 4 }} />
-              <div>{lang==="en" ? "اردو" : "English"}</div>
-            </button>
-            <button style={ms.sbAction} onClick={toggleTheme}>
-              {theme==="dark" ? <Sun size={16} style={{ marginBottom: 4 }} /> : <Moon size={16} style={{ marginBottom: 4 }} />}
-              <div>{theme==="dark" ? "Light" : "Dark"}</div>
-            </button>
-          </div>
-        </motion.aside>
-      </>
+      {/* Sidebar removed as requested - using top bar and bottom nav instead */}
 
       {/* ── MAIN ── */}
       <div style={ms.main}>
         {/* Top bar */}
         <header style={ms.topBar}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <button style={ms.menuBtn} onClick={() => setSidebarOpen(true)}>
-              <Menu size={24} color="var(--text-secondary)" />
-            </button>
-            <div>
-              <h1 style={ms.pageTitle}>
-                <span style={{ display:"inline-flex", alignItems:"center", verticalAlign:"middle", marginRight:8 }}>{active?.icon}</span>
-                <span style={{ verticalAlign:"middle" }}>{active?.label}</span>
-              </h1>
+            <div style={{ ...ms.topBrand, cursor: "pointer", marginLeft: 0 }} onClick={() => setActiveTab("dashboard")}>
+              <img src="/logo.png" alt="SpendSmart" style={{ width:24, height:24, borderRadius:5, objectFit:"cover" }} />
+              <span style={{ fontSize:15, fontWeight:800, color:"var(--accent)" }}>SpendSmart</span>
             </div>
           </div>
 
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            {/* Theme toggle */}
-            <button style={ms.iconBtn} onClick={toggleTheme} title="Toggle theme">
-              {theme==="dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            {/* Lang */}
-            <button style={ms.iconBtn} onClick={() => setLang(lang==="en"?"ur":"en")}>
-              <Globe size={18} />
-            </button>
+            {/* Rewards shortcut */}
+            <motion.button 
+              style={ms.iconBtn} 
+              onClick={() => setActiveTab("rewards")} 
+              title="Your Rewards"
+              whileHover={{ scale: 1.1, background: "var(--accent-subtle)" }} 
+              whileTap={{ scale: 0.9 }}
+            >
+              <Trophy size={18} color="var(--accent)" />
+            </motion.button>
+
             {/* Notifications */}
             <div style={{ position:"relative" }}>
-              <button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)}>
+              <motion.button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Bell size={18} />
                 {unreadCount > 0 && <span style={ms.notifDot}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
-              </button>
+              </motion.button>
               <AnimatePresence>
                 {showNotif && <NotificationCenter onClose={() => setShowNotif(false)} />}
               </AnimatePresence>
             </div>
             {/* Avatar */}
-            <button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => setActiveTab("profile")}>
+            <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => setActiveTab("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
               {user?.photo ? (
                 <img src={user.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               ) : (
                 user?.avatar||"🧑‍💻"
               )}
-            </button>
-            {/* Logout */}
-            <button style={{ ...ms.iconBtn, color:"var(--red)" }} onClick={logout} title="Sign out">
-              <LogOut size={18} />
-            </button>
+            </motion.button>
+            {/* Settings */}
+            <div style={{ position:"relative" }}>
+              <motion.button style={ms.iconBtn} onClick={() => setShowSettings(!showSettings)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <MoreVertical size={18} />
+              </motion.button>
+              <AnimatePresence>
+                {showSettings && (
+                  <SettingsDropdown 
+                    onClose={() => setShowSettings(false)}
+                    onToggleTheme={toggleTheme}
+                    theme={theme}
+                    onToggleLang={() => setLang(lang==="en"?"ur":"en")}
+                    lang={lang}
+                    logout={logout}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
@@ -187,7 +159,7 @@ export default function MainApp() {
           >
             <span>⚠️</span>
             <span style={{ flex:1, fontSize:13 }}>No budget set! Go to your Profile to set your monthly budget.</span>
-            <button style={ms.budgetBannerBtn} onClick={() => setActiveTab("profile")}>Set Budget →</button>
+            <motion.button style={ms.budgetBannerBtn} onClick={() => setActiveTab("profile")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Set Budget →</motion.button>
           </motion.div>
         )}
 
@@ -205,18 +177,42 @@ export default function MainApp() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom nav (mobile) */}
         <nav style={ms.bottomNav}>
-          {NAV.slice(0,5).map(n => (
-            <button key={n.key}
-              style={{ ...ms.bottomItem, ...(activeTab===n.key ? ms.bottomActive : {}), ...(n.accent ? ms.bottomAccent : {}) }}
-              onClick={() => setActiveTab(n.key)}
-            >
-              <span style={{ display:"flex", alignItems:"center", justifyContent:"center", marginBottom:4 }}>{n.icon}</span>
-              <span style={{ fontSize:9 }}>{n.label.split(" ")[0]}</span>
-            </button>
-          ))}
+          {["dashboard", "analytics", "recurring", "addExpense", "history", "goals", "advice"].map(key => {
+            const n = NAV.find(item => item.key === key);
+            if (!n) return null;
+
+            if (n.key === "addExpense") {
+              return (
+                <div key={n.key} style={ms.bottomFabWrap}>
+                  <motion.button
+                    style={ms.bottomFab}
+                    onClick={() => setActiveTab(n.key)}
+                    whileHover={{ scale: 1.15, boxShadow: "0 6px 16px rgba(245,158,11,0.6)" }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Plus size={28} />
+                  </motion.button>
+                </div>
+              );
+            }
+            return (
+              <motion.button key={n.key}
+                style={{ ...ms.bottomItem, ...(activeTab === n.key ? ms.bottomActive : {}) }}
+                onClick={() => setActiveTab(n.key)}
+                whileHover={{ scale: 1.1, color: "var(--accent)" }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>{n.icon}</span>
+                <span style={{ fontSize: 8.5, fontWeight: activeTab===n.key ? 700 : 500, whiteSpace:"nowrap" }}>
+                  {n.key === "advice" ? "AI" : n.label.split(" ")[0]}
+                </span>
+              </motion.button>
+            );
+          })}
         </nav>
+        {/* Celebration Popup */}
+        <CelebrationPopup reward={celebrationReward} onClose={() => setCelebrationReward(null)} />
       </div>
     </div>
   );
@@ -236,15 +232,16 @@ const ms = {
   sbUserSub:    { margin:0, fontSize:11, color:"var(--text-muted)" },
   sbBudget:     { padding:"12px 16px", borderBottom:"1px solid var(--border-light)" },
   sbNav:        { flex:1, padding:"10px 8px", display:"flex", flexDirection:"column", gap:2, overflowY:"auto" },
-  sbNavItem:    { display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"transparent", border:"none", color:"var(--text-muted)", borderRadius:9, cursor:"pointer", textAlign:"left", fontFamily:"var(--font)", transition:"all 0.15s" },
-  sbNavActive:  { background:"var(--accent-subtle)", color:"var(--accent)", fontWeight:600 },
-  sbNavAccent:  { },
-  addBadge:     { marginLeft:"auto", background:"var(--accent)", color:"#111", width:20, height:20, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
+  sbNavItem:    { display:"flex", alignItems:"center", gap:12, padding:"8px 12px", background:"transparent", border:"none", color:"var(--text-muted)", borderRadius:12, cursor:"pointer", textAlign:"left", fontFamily:"var(--font)", transition:"all 0.15s" },
+  sbNavActive:  { background:"var(--accent-subtle)", color:"var(--accent)", fontWeight:700 },
+  sbNavIcon:    { width:32, height:32, borderRadius:"50%", background:"var(--bg-input)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   sbBottom:     { display:"flex", gap:6, padding:"12px 10px 16px", borderTop:"1px solid var(--border-light)" },
   sbAction:     { flex:1, background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px", borderRadius:8, cursor:"pointer", fontSize:11, fontWeight:500, fontFamily:"var(--font)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" },
   main:         { flex:1, display:"flex", flexDirection:"column", minHeight:"100vh" },
   topBar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 18px", background:"var(--bg-card)", borderBottom:"1px solid var(--border-light)", position:"sticky", top:0, zIndex:100 },
   menuBtn:      { background:"transparent", border:"none", cursor:"pointer", padding:"6px", display:"flex", flexDirection:"column" },
+  backBtn:      { display:"flex", alignItems:"center", gap:4, background:"var(--accent-subtle)", border:"1px solid var(--accent)", borderRadius:8, padding:"4px 8px", cursor:"pointer", color:"var(--accent)" },
+  topBrand:     { display:"flex", alignItems:"center", gap:6, marginLeft:4 },
   pageTitle:    { margin:0, fontSize:16, fontWeight:700, color:"var(--text-primary)" },
   iconBtn:      { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", width:34, height:34, borderRadius:9, cursor:"pointer", fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", flexShrink:0 },
   notifDot:     { position:"absolute", top:-5, right:-5, background:"var(--red)", color:"#fff", fontSize:9, fontWeight:700, width:16, height:16, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
@@ -252,8 +249,12 @@ const ms = {
   budgetBanner: { display:"flex", alignItems:"center", gap:10, padding:"10px 18px", background:"var(--accent-subtle)", borderBottom:"1px solid rgba(245,158,11,0.25)", fontSize:13 },
   budgetBannerBtn:{ background:"var(--accent)", border:"none", color:"#111", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", fontFamily:"var(--font)" },
   content:      { flex:1, overflowY:"auto", paddingBottom:72 },
-  bottomNav:    { position:"fixed", bottom:0, left:0, right:0, background:"var(--bg-card)", borderTop:"1px solid var(--border-light)", display:"flex", zIndex:100 },
-  bottomItem:   { flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 4px 10px", background:"transparent", border:"none", color:"var(--text-muted)", cursor:"pointer", fontFamily:"var(--font)" },
+  bottomNav:    { position:"fixed", bottom:0, left:0, right:0, background:"var(--bg-card)", borderTop:"1px solid var(--border-light)", display:"flex", zIndex:100, height:60, alignItems:"center" },
+  bottomItem:   { flex:1, display:"flex", flexDirection:"column", alignItems:"center", background:"transparent", border:"none", color:"var(--text-muted)", cursor:"pointer", fontFamily:"var(--font)" },
   bottomActive: { color:"var(--accent)" },
-  bottomAccent: { },
+  bottomFabWrap:{ flex:1, display:"flex", justifyContent:"center", position:"relative" },
+  bottomFab:    { width:54, height:54, borderRadius:"50%", background:"linear-gradient(135deg,#f59e0b,#f97316)", color:"#111", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 4px 14px rgba(245,158,11,0.45)", position:"absolute", top:-27 },
+  dropdown:     { position:"absolute", top:42, right:0, background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, width:160, padding:6, zIndex:1000, boxShadow:"var(--shadow-lg)" },
+  dropdownHeader:{ fontSize:10, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", padding:"8px 12px 4px" },
+  dropdownItem: { width:"100%", display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"transparent", border:"none", color:"var(--text-primary)", borderRadius:8, cursor:"pointer", fontSize:13, textAlign:"left", fontFamily:"var(--font)", transition:"0.2s" },
 };

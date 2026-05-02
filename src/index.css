@@ -66,6 +66,43 @@
   --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
 }
 
+/* Accent Themes */
+[data-accent="blue"] {
+  --accent: #3b82f6; --accent-hover: #60a5fa; --accent-glow: rgba(59,130,246,0.25); --accent-subtle: rgba(59,130,246,0.12);
+}
+[data-theme="light"][data-accent="blue"] {
+  --accent: #2563eb; --accent-hover: #1d4ed8; --accent-glow: rgba(37,99,235,0.12); --accent-subtle: rgba(37,99,235,0.06);
+}
+
+[data-accent="emerald"] {
+  --accent: #10b981; --accent-hover: #34d399; --accent-glow: rgba(16,185,129,0.25); --accent-subtle: rgba(16,185,129,0.12);
+}
+[data-theme="light"][data-accent="emerald"] {
+  --accent: #059669; --accent-hover: #047857; --accent-glow: rgba(5,150,105,0.12); --accent-subtle: rgba(5,150,105,0.06);
+}
+
+[data-accent="rose"] {
+  --accent: #f43f5e; --accent-hover: #fb7185; --accent-glow: rgba(244,63,94,0.25); --accent-subtle: rgba(244,63,94,0.12);
+}
+[data-theme="light"][data-accent="rose"] {
+  --accent: #e11d48; --accent-hover: #be123c; --accent-glow: rgba(225,29,72,0.12); --accent-subtle: rgba(225,29,72,0.06);
+}
+
+[data-accent="purple"] {
+  --accent: #8b5cf6; --accent-hover: #a78bfa; --accent-glow: rgba(139,92,246,0.25); --accent-subtle: rgba(139,92,246,0.12);
+}
+[data-theme="light"][data-accent="purple"] {
+  --accent: #7c3aed; --accent-hover: #6d28d9; --accent-glow: rgba(124,58,237,0.12); --accent-subtle: rgba(124,58,237,0.06);
+}
+
+/* Default (Orange) falls back to the defined --accent in root / light, but if specifically set: */
+[data-accent="orange"] {
+  --accent: #f59e0b; --accent-hover: #fbbf24; --accent-glow: rgba(245,158,11,0.25); --accent-subtle: rgba(245,158,11,0.12);
+}
+[data-theme="light"][data-accent="orange"] {
+  --accent: #e09000; --accent-hover: #c97e00; --accent-glow: rgba(224,144,0,0.12); --accent-subtle: rgba(224,144,0,0.06);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
@@ -93,7 +130,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ec4899 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

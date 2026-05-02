@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, Bell, X } from "lucide-react";
 
@@ -53,9 +53,23 @@ const nTypeStyle = {
 };
 
 export function NotificationCenter({ onClose }) {
-  const { notifications, markAllRead, clearNotifications } = useApp();
+  const { notifications, markAllRead, clearNotifications, requestNotificationPermission } = useApp();
   const [tab, setTab] = useState("all");
-  const shown = tab === "unread" ? notifications.filter(n => !n.read) : notifications;
+  const [notifPermission, setNotifPermission] = useState(window.Notification?.permission || "default");
+
+  useEffect(() => {
+    // Automatically mark as read when the user opens the panel
+    if (notifications.some(n => !n.isRead)) {
+      markAllRead();
+    }
+  }, [markAllRead, notifications.length]); // Only run when count changes or on mount
+
+  const handleEnable = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) setNotifPermission("granted");
+  };
+
+  const shown = tab === "unread" ? notifications.filter(n => !n.isRead) : notifications;
 
   return (
     <motion.div
@@ -71,25 +85,31 @@ export function NotificationCenter({ onClose }) {
           <span style={{ verticalAlign:"middle" }}>Notifications</span>
         </h3>
         <div style={{ display:"flex", gap:6 }}>
-          <button style={NC.actionBtn} onClick={markAllRead}>Mark all read</button>
-          <button style={NC.actionBtn} onClick={clearNotifications}>Clear all</button>
-          <button style={{ ...NC.actionBtn, display:"flex", alignItems:"center" }} onClick={onClose}><X size={16} /></button>
+          <motion.button style={NC.actionBtn} onClick={markAllRead} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Mark all read</motion.button>
+          <motion.button style={NC.actionBtn} onClick={clearNotifications} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Clear all</motion.button>
+          <motion.button style={{ ...NC.actionBtn, display:"flex", alignItems:"center" }} onClick={onClose} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}><X size={16} /></motion.button>
         </div>
       </div>
       <div style={NC.tabs}>
         {["all","unread"].map(t => (
-          <button key={t} style={{ ...NC.tab, ...(tab===t ? NC.tabActive : {}) }} onClick={() => setTab(t)}>
+          <motion.button key={t} style={{ ...NC.tab, ...(tab===t ? NC.tabActive : {}) }} onClick={() => setTab(t)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             {t.charAt(0).toUpperCase()+t.slice(1)}
-          </button>
+          </motion.button>
         ))}
       </div>
       <div style={NC.list}>
+        {notifPermission === "default" && (
+          <div style={NC.permissionBox}>
+            <p style={{ margin:"0 0 8px", fontSize:12, color:"var(--text-primary)" }}>Enable desktop alerts to never miss a budget warning.</p>
+            <motion.button style={NC.enableBtn} onClick={handleEnable} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Enable Notifications</motion.button>
+          </div>
+        )}
         {shown.length === 0 ? (
           <div style={NC.empty}><div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}><Bell size={32} color="var(--text-muted)" /></div><p style={{ margin:0 }}>No notifications</p></div>
         ) : shown.map(n => {
           const s = nTypeStyle[n.type] || nTypeStyle.info;
           return (
-            <div key={n.id} style={{ ...NC.item, background: n.read ? "transparent" : s.bg, borderLeft:`3px solid ${n.read ? "transparent" : s.color}` }}>
+            <div key={n.id} style={{ ...NC.item, background: n.isRead ? "transparent" : s.bg, borderLeft:`3px solid ${n.isRead ? "transparent" : s.color}` }}>
               <span style={{ fontSize:16, flexShrink:0 }}>{n.icon}</span>
               <div style={{ flex:1 }}>
                 <p style={NC.itemTitle}>{n.title}</p>
@@ -118,4 +138,6 @@ const NC = {
   itemMsg:   { margin:"2px 0 0", fontSize:12, color:"var(--text-secondary)", lineHeight:1.5 },
   itemTime:  { fontSize:10, color:"var(--text-muted)", whiteSpace:"nowrap", marginTop:2, flexShrink:0 },
   empty:     { textAlign:"center", padding:"40px 0", color:"var(--text-muted)", fontSize:13 },
+  permissionBox: { padding:"16px", background:"var(--accent-subtle)", borderBottom:"1px solid var(--border-light)", textAlign:"center" },
+  enableBtn: { background:"var(--accent)", border:"none", color:"#111", padding:"6px 14px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer" },
 };

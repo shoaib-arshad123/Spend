@@ -15,6 +15,8 @@ CREATE TABLE users (
   budget DECIMAL(10, 2) DEFAULT 0,
   language VARCHAR(20) DEFAULT 'en',
   theme VARCHAR(20) DEFAULT 'dark',
+  avatar NVARCHAR(50) DEFAULT N'🧑‍💻',
+  photo NVARCHAR(MAX) NULL,
   createdAt DATETIME DEFAULT GETDATE(),
   updatedAt DATETIME DEFAULT GETDATE()
 );
@@ -78,6 +80,8 @@ CREATE TABLE notifications (
   userId INT NOT NULL,
   message VARCHAR(500),
   type VARCHAR(50),
+  title VARCHAR(255),
+  icon VARCHAR(50),
   isRead BIT DEFAULT 0,
   createdAt DATETIME DEFAULT GETDATE(),
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE

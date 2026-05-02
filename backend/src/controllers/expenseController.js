@@ -2,7 +2,7 @@ import { pool } from '../config/database.js';
 
 export const addExpense = async (req, res) => {
   try {
-    const { amount, category, description, date } = req.body;
+    const { amount, category, description, date, source } = req.body;
 
     if (!amount || !category || !date) {
       return res.status(400).json({ success: false, message: 'Required fields missing' });
@@ -14,14 +14,23 @@ export const addExpense = async (req, res) => {
       .input('category', category)
       .input('description', description || '')
       .input('date', date)
-      .query('INSERT INTO expenses (userId, amount, category, description, date) OUTPUT INSERTED.id VALUES (@userId, @amount, @category, @description, @date)');
+      .input('source', source || 'manual')
+      .query('INSERT INTO expenses (userId, amount, category, description, date, source) OUTPUT INSERTED.id VALUES (@userId, @amount, @category, @description, @date, @source)');
 
     const expenseId = result.recordset[0].id;
+
+    if (amount >= 5000) {
+      await pool.request()
+        .input('userId', req.userId)
+        .input('message', `You added a large expense of PKR ${amount} for ${category}. Keep an eye on your budget!`)
+        .input('type', 'warning')
+        .query('INSERT INTO notifications (userId, message, type) VALUES (@userId, @message, @type)');
+    }
 
     res.status(201).json({
       success: true,
       message: 'Expense added successfully',
-      expense: { id: expenseId, userId: req.userId, amount, category, description, date }
+      expense: { id: expenseId, userId: req.userId, amount, category, description, date, source: source || 'manual' }
     });
   } catch (error) {
     console.error('Add expense error:', error);
@@ -31,26 +40,51 @@ export const addExpense = async (req, res) => {
 
 export const getExpenses = async (req, res) => {
   try {
-    const { startDate, endDate, category } = req.query;
+    const { startDate, endDate, category, page = 1, limit = 50 } = req.query;
+    const p = parseInt(page);
+    const l = parseInt(limit);
+    const offset = (p - 1) * l;
+
     const request = pool.request().input('userId', req.userId);
 
-    let query = 'SELECT * FROM expenses WHERE userId = @userId';
+    let baseQuery = 'WHERE userId = @userId';
 
     if (startDate && endDate) {
-      query += ' AND date BETWEEN @startDate AND @endDate';
+      baseQuery += ' AND date BETWEEN @startDate AND @endDate';
       request.input('startDate', startDate);
       request.input('endDate', endDate);
     }
 
     if (category && category !== 'all') {
-      query += ' AND category = @category';
+      baseQuery += ' AND category = @category';
       request.input('category', category);
     }
 
-    query += ' ORDER BY date DESC';
+    // Get total count for pagination metadata
+    const countResult = await request.query(`SELECT COUNT(*) as total FROM expenses ${baseQuery}`);
+    const totalCount = countResult.recordset[0].total;
+
+    // Get paginated results
+    const query = `
+      SELECT * FROM expenses 
+      ${baseQuery} 
+      ORDER BY date DESC 
+      OFFSET ${offset} ROWS 
+      FETCH NEXT ${l} ROWS ONLY
+    `;
 
     const result = await request.query(query);
-    res.json({ success: true, expenses: result.recordset });
+    
+    res.json({ 
+      success: true, 
+      expenses: result.recordset,
+      pagination: {
+        total: totalCount,
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(totalCount / l)
+      }
+    });
   } catch (error) {
     console.error('Get expenses error:', error);
     res.status(500).json({ success: false, message: 'Server error' });

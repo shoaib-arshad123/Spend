@@ -8,11 +8,12 @@ import {
   getExpenseStats
 } from '../controllers/expenseController.js';
 import { verifyToken } from '../middleware/auth.js';
+import { expenseValidation, validateRequest } from '../middleware/validation.js';
 
 const router = express.Router();
-router.post('/', verifyToken, addExpense);
+router.post('/', verifyToken, expenseValidation, validateRequest, addExpense);
 router.get('/', verifyToken, getExpenses);
 router.get('/stats', verifyToken, getExpenseStats);
-router.put('/:id', verifyToken, updateExpense);
+router.put('/:id', verifyToken, expenseValidation, validateRequest, updateExpense);
 router.delete('/:id', verifyToken, deleteExpense);
 export default router;

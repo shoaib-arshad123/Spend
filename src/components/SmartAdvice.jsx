@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { formatPKR, getPredictionDays, getSmartAdvice } from "../utils/helpers";
 import { getCategoryColor, getCategoryIcon } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
@@ -27,7 +29,9 @@ const AI_LABELS = {
   ur:{ title:"🧠 AI خرچ تجزیہ", empty:"AI تجزیہ کے لیے مزید اخراجات شامل کریں۔", insight:"اہم بات" },
 };
 
-export default function SmartAdvice({ t, lang, expenses, budget }) {
+export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab }) {
+  const { pushNotification } = useApp();
+  const notifiedAdvice = useRef(false);
   const adviceList = getSmartAdvice(expenses, lang);
   const predDays   = getPredictionDays(expenses, budget);
   const totalSpent = expenses.reduce((s,e)=>s+e.amount,0);
@@ -44,8 +48,36 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
   const aiScoreColor = aiScore>=70?"var(--green)":aiScore>=40?"var(--accent)":"var(--red)";
   const aiScoreLabel = aiScore>=70?"Excellent 🏆":aiScore>=40?"Moderate ⚖️":"Needs Work ⚠️";
 
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastAiNotif = localStorage.getItem("last_notified_ai");
+
+    if (adviceList.length > 0 && lastAiNotif !== today) {
+      localStorage.setItem("last_notified_ai", today);
+      pushNotification({
+        title: "AI Spending Insight 🧠",
+        message: adviceList[0], 
+        type: "info",
+        icon: "🧠"
+      });
+    }
+  }, [adviceList, pushNotification]);
+
   return (
     <div style={SA.container}>
+      {/* Header with Back */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+        <motion.button 
+          style={SA.backCircle} 
+          onClick={() => setActiveTab("dashboard")}
+          whileHover={{ scale:1.1, background:"var(--bg-elevated)" }}
+          whileTap={{ scale:0.9 }}
+        >
+          <ChevronLeft size={20} color="var(--text-secondary)" />
+        </motion.button>
+        <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)" }}>{ai.title}</h2>
+      </div>
+
       {/* Prediction banner */}
       {predDays !== null && (
         <motion.div
@@ -67,7 +99,7 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
       )}
 
       {/* AI score card */}
-      <div style={SA.card}>
+      <motion.div style={SA.card} whileHover={{ y: -4, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }} transition={{ type: "spring", stiffness: 300 }}>
         <h3 style={SA.cardTitle}>{ai.title}</h3>
         {expenses.length < 3 ? (
           <p style={{ color:"var(--text-muted)", fontSize:13, textAlign:"center", padding:"12px 0" }}>{ai.empty}</p>
@@ -95,11 +127,11 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Category spending breakdown */}
       {sortedCats.length > 0 && (
-        <div style={SA.card}>
+        <motion.div style={SA.card} whileHover={{ y: -4, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }} transition={{ type: "spring", stiffness: 300 }}>
           <h3 style={SA.cardTitle}>📊 Spending Breakdown</h3>
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             {sortedCats.map(([cat, amt], i) => {
@@ -127,11 +159,11 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Saving tips */}
-      <div style={SA.card}>
+      <motion.div style={SA.card} whileHover={{ y: -4, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }} transition={{ type: "spring", stiffness: 300 }}>
         <h3 style={SA.cardTitle}>💡 {lang==="ur"?"بچت کے مشورے":"Saving Tips for Students"}</h3>
         <div style={SA.tipsGrid}>
           {tips.map((tip, i) => (
@@ -148,11 +180,11 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
             </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Weekly pattern insight */}
       {expenses.length >= 5 && (
-        <div style={SA.card}>
+        <motion.div style={SA.card} whileHover={{ y: -4, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }} transition={{ type: "spring", stiffness: 300 }}>
           <h3 style={SA.cardTitle}>⏱ Spending Pattern</h3>
           <div style={SA.patternGrid}>
             {getHourlyPattern(expenses).map((h, i) => (
@@ -172,7 +204,7 @@ export default function SmartAdvice({ t, lang, expenses, budget }) {
           <p style={{ margin:"8px 0 0", fontSize:12, color:"var(--text-muted)" }}>
             🔔 Your peak spending time is {getPeakHour(expenses)}. Set a reminder to review before spending then.
           </p>
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -203,6 +235,8 @@ const SA = {
   predBanner:  { display:"flex", alignItems:"center", gap:12, padding:"14px 18px", borderRadius:14, border:"1px solid" },
   card:        { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px" },
   cardTitle:   { margin:"0 0 16px", fontSize:15, fontWeight:700, color:"var(--text-primary)" },
+  tipLabel:     { fontSize:11, fontWeight:700, color:"var(--accent)", marginBottom:4 },
+  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
   scoreCircle: { display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 },
   adviceItem:  { display:"flex", gap:10, alignItems:"flex-start", background:"var(--bg-input)", borderRadius:8, padding:"10px 12px" },
   tipsGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 },

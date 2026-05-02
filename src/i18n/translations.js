@@ -35,6 +35,7 @@ export const translations = {
       health: "Health",
       entertainment: "Entertainment",
       clothing: "Clothing",
+      savings: "Savings",
       other: "Other",
     },
     adviceTitle: "Smart Suggestions",
@@ -86,6 +87,7 @@ export const translations = {
       health: "صحت",
       entertainment: "تفریح",
       clothing: "کپڑے",
+      savings: "بچت",
       other: "دیگر",
     },
     adviceTitle: "سمارٹ تجاویز",
@@ -104,6 +106,8 @@ export const translations = {
 };
 
 export const getCategoryIcon = (cat) => {
+  if (!cat) return "📦";
+  const normalized = cat.toLowerCase();
   const icons = {
     food: "🍔",
     transport: "🚌",
@@ -111,12 +115,15 @@ export const getCategoryIcon = (cat) => {
     health: "💊",
     entertainment: "🎮",
     clothing: "👕",
+    savings: "💰",
     other: "📦",
   };
-  return icons[cat] || "📦";
+  return icons[normalized] || "📦";
 };
 
 export const getCategoryColor = (cat) => {
+  if (!cat) return "#6b7280";
+  const normalized = cat.toLowerCase();
   const colors = {
     food: "#f59e0b",
     transport: "#3b82f6",
@@ -124,7 +131,8 @@ export const getCategoryColor = (cat) => {
     health: "#10b981",
     entertainment: "#ec4899",
     clothing: "#f97316",
+    savings: "#10b981",
     other: "#6b7280",
   };
-  return colors[cat] || "#6b7280";
+  return colors[normalized] || "#6b7280";
 };

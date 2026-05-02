@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { formatPKR, classifyUser, SEED_EXPENSES } from "../utils/helpers";
 import { categoryAPI } from "../services/api.js";
-import { User as UserIcon, Edit3, Wallet, Settings, LogOut, DownloadCloud, Camera, Palette, DollarSign, CalendarDays, Zap, FileText, Trophy, Plus } from "lucide-react";
+import { User as UserIcon, Edit3, Wallet, Settings, LogOut, DownloadCloud, Camera, Palette, DollarSign, CalendarDays, Zap, FileText, Trophy, Plus, Layout, ChevronLeft } from "lucide-react";
 
 const AVATARS = ["🧑‍💻","👨‍🎓","👩‍🎓","🧑‍🎓","👦","👧","🧑","🧑‍💼","🧑‍🔬","🧑‍🎨","🧕","🧔"];
 const CAT_ICONS = { food:"🍔", transport:"🚌", books:"📚", health:"💊", entertainment:"🎮", clothing:"👕", other:"📦" };
@@ -30,8 +30,8 @@ function topCats(expenses) {
   return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,5);
 }
 
-export default function Profile() {
-  const { user, updateProfile, logout, expenses, addExpense, budget, setBudget, theme, toggleTheme, categories, addCategory } = useApp();
+export default function Profile({ setActiveTab }) {
+  const { user, updateProfile, logout, expenses, addExpense, budget, setBudget, theme, toggleTheme, accent, setAccent, categories, addCategory, allTimeTotal, allTimeBudget, monthlySpent, effectiveMonthlyBudget, monthlyRemaining } = useApp();
   const [section, setSection] = useState("overview"); // overview | edit | budget | danger | categories
   const [editForm, setEditForm] = useState({ name:user?.name||"", avatar:user?.avatar||"🧑‍💻", photo:user?.photo||null });
   const [budgetInput, setBudgetInput] = useState(String(budget||""));
@@ -69,14 +69,11 @@ export default function Profile() {
   const [saved, setSaved] = useState(false);
   const fileRef = useRef(null);
 
-  const totalSpent  = expenses.reduce((s,e) => s+e.amount, 0);
-  const userType    = classifyUser(totalSpent, budget);
+  const userType    = classifyUser(allTimeTotal, effectiveMonthlyBudget);
   const streak      = streakCount(expenses);
-  const monthSpent  = thisMonth(expenses);
-  const pct         = budget > 0 ? Math.round((totalSpent/budget)*100) : 0;
-  const remaining   = budget - totalSpent;
+  const pct         = effectiveMonthlyBudget > 0 ? Math.round((monthlySpent/effectiveMonthlyBudget)*100) : 0;
   const topCategories = topCats(expenses);
-  const joinDate    = user?.joinedAt ? new Date(user.joinedAt).toLocaleDateString("en-PK",{year:"numeric",month:"long",day:"numeric"}) : "Today";
+  const joinDate    = user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-PK",{year:"numeric",month:"long",day:"numeric"}) : "Today";
 
   const typeConfig = {
     saver:    { label:"💚 Smart Saver",    bg:"var(--green-bg)",   color:"var(--green)",  desc:"You're managing your budget excellently!" },
@@ -105,20 +102,39 @@ export default function Profile() {
     { key:"edit",     label:"Edit Profile",     icon: <Edit3 size={16} /> },
     { key:"budget",   label:"Budget Settings",  icon: <Wallet size={16} /> },
     { key:"categories", label:"Categories",     icon: <Palette size={16} /> },
+    { key:"appearance", label:"Appearance",     icon: <Layout size={16} /> },
     { key:"danger",   label:"Account",          icon: <Settings size={16} /> },
   ];
 
   return (
     <div style={P.root}>
+      {/* Header with Back */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+        <motion.button 
+          style={P.backCircle} 
+          onClick={() => setActiveTab("dashboard")}
+          whileHover={{ scale:1.1, background:"var(--bg-elevated)" }}
+          whileTap={{ scale:0.9 }}
+        >
+          <ChevronLeft size={20} color="var(--text-secondary)" />
+        </motion.button>
+        <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)" }}>Profile</h2>
+      </div>
+
       {/* Profile hero card */}
       <div style={P.heroCard}>
         <div style={P.heroLeft}>
-          <div style={P.avatarWrap}>
+          <div 
+            style={{ ...P.avatarWrap, cursor: "pointer" }} 
+            onClick={() => setSection("edit")}
+            title="Change Profile Picture"
+          >
             {user?.photo ? (
               <img src={user?.photo} alt="Profile" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
             ) : (
               user?.avatar || "🧑‍💻"
             )}
+            <motion.div style={P.avatarOverlay} whileHover={{ opacity: 1 }}><Camera size={20} /></motion.div>
           </div>
           <div>
             <h2 style={P.userName}>{user?.name}</h2>
@@ -136,9 +152,9 @@ export default function Profile() {
       {/* Tab navigation */}
       <div style={P.tabs}>
         {SECTIONS.map(s => (
-          <button key={s.key} style={{ ...P.tab, ...(section===s.key ? P.tabActive : {}) }} onClick={() => setSection(s.key)}>
+          <motion.button key={s.key} style={{ ...P.tab, ...(section===s.key ? P.tabActive : {}) }} onClick={() => setSection(s.key)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <span>{s.icon}</span><span style={{ fontSize:13 }}>{s.label}</span>
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -154,10 +170,10 @@ export default function Profile() {
                 <h3 style={P.cardTitle}>Your Stats</h3>
                 <div style={P.statsGrid}>
                   {[
-                    { icon: <DollarSign size={20} />, label:"Total Spent",    value:formatPKR(totalSpent),  color:"var(--red)" },
-                    { icon: <Wallet size={20} />, label:"Monthly Budget",  value:formatPKR(budget),      color:"var(--blue)" },
-                    { icon: <CalendarDays size={20} />, label:"This Month",      value:formatPKR(monthSpent),  color:"var(--accent)" },
-                    { icon: <Zap size={20} />, label:"Budget Left",     value:formatPKR(Math.max(remaining,0)), color:"var(--green)" },
+                    { icon: <DollarSign size={20} />, label:"All Time Spent",    value:formatPKR(allTimeTotal),  color:"var(--red)" },
+                    { icon: <Wallet size={20} />, label:"All Time Budget",  value:formatPKR(allTimeBudget),      color:"var(--blue)" },
+                    { icon: <CalendarDays size={20} />, label:"This Month Spent",      value:formatPKR(monthlySpent),  color:"var(--accent)" },
+                    { icon: <Zap size={20} />, label:"This Month Budget",     value:formatPKR(effectiveMonthlyBudget), color:"var(--green)" },
                     { icon: <Trophy size={20} />, label:"Day Streak",      value:`${streak} days`,       color:"var(--orange)" },
                     { icon: <FileText size={20} />, label:"Total Expenses",  value:`${expenses.length}`,   color:"var(--purple)" },
                   ].map(s => (
@@ -171,21 +187,21 @@ export default function Profile() {
               </div>
 
               {/* Budget status */}
-              {budget === 0 ? (
+              {effectiveMonthlyBudget === 0 ? (
                 <div style={{ ...P.card, border:"1px solid var(--accent)", background:"var(--accent-subtle)" }}>
                   <div style={{ textAlign:"center", padding:"10px 0" }}>
                     <span style={{ fontSize:36, display:"block", marginBottom:10 }}>⚠️</span>
                     <h3 style={{ margin:"0 0 8px", fontSize:16, fontWeight:700, color:"var(--accent)" }}>No Budget Set!</h3>
                     <p style={{ margin:"0 0 16px", fontSize:13, color:"var(--text-secondary)" }}>Set your monthly budget to start tracking how much you can spend.</p>
-                    <button style={P.setBudgetBtn} onClick={() => setSection("budget")}>💰 Set My Budget Now</button>
+                    <motion.button style={P.setBudgetBtn} onClick={() => setSection("budget")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>💰 Set My Budget Now</motion.button>
                   </div>
                 </div>
               ) : (
                 <div style={P.card}>
-                  <h3 style={P.cardTitle}>Budget Status</h3>
+                  <h3 style={P.cardTitle}>This Month's Status</h3>
                   <div style={{ marginBottom:10 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                      <span style={{ fontSize:13, color:"var(--text-secondary)" }}>PKR {totalSpent.toLocaleString()} of {budget.toLocaleString()} used</span>
+                      <span style={{ fontSize:13, color:"var(--text-secondary)" }}>PKR {monthlySpent.toLocaleString()} of {effectiveMonthlyBudget.toLocaleString()} used</span>
                       <span style={{ fontSize:13, fontWeight:700, color: pct>=100?"var(--red)":pct>=80?"var(--accent)":"var(--green)" }}>{pct}%</span>
                     </div>
                     <div style={{ height:10, background:"var(--border)", borderRadius:5 }}>
@@ -198,8 +214,8 @@ export default function Profile() {
                     </div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:12, color:"var(--text-muted)" }}>Budget: {formatPKR(budget)}</span>
-                    <span style={{ fontSize:12, color:remaining>=0?"var(--green)":"var(--red)", fontWeight:600 }}>{remaining>=0?"Remaining":"Overspent"}: {formatPKR(Math.abs(remaining))}</span>
+                    <span style={{ fontSize:12, color:"var(--text-muted)" }}>Budget: {formatPKR(effectiveMonthlyBudget)}</span>
+                    <span style={{ fontSize:12, color:monthlyRemaining>=0?"var(--green)":"var(--red)", fontWeight:600 }}>{monthlyRemaining>=0?"Remaining":"Overspent"}: {formatPKR(Math.abs(monthlyRemaining))}</span>
                   </div>
                 </div>
               )}
@@ -210,7 +226,7 @@ export default function Profile() {
                 {topCategories.length === 0 ? (
                   <p style={P.empty}>No expenses yet. Start tracking!</p>
                 ) : topCategories.map(([catName, amt], i) => {
-                  const pctCat = totalSpent > 0 ? Math.round((amt/totalSpent)*100) : 0;
+                  const pctCat = allTimeTotal > 0 ? Math.round((amt/allTimeTotal)*100) : 0;
                   const categoryInfo = categories.find(c => c.name === catName) || { icon: '📦' };
                   return (
                     <div key={catName} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
@@ -251,12 +267,14 @@ export default function Profile() {
                   <div style={{ width:80, height:80, borderRadius:"50%", background:"var(--bg-elevated)", border:"2px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, overflow:"hidden" }}>
                     {editForm.photo ? <img src={editForm.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : editForm.avatar}
                   </div>
-                  <button 
-                    style={{ position:"absolute", bottom:-4, right:-4, background:"var(--accent)", color:"#111", border:"none", width:28, height:28, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 2px 4px rgba(0,0,0,0.3)" }}
+                  <motion.button 
+                    style={{ position:"absolute", bottom:-4, right:-4, background:"var(--accent)", color:"#111", border:"none", width:32, height:32, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 2px 4px rgba(0,0,0,0.3)" }}
                     onClick={() => fileRef.current?.click()}
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    title="Upload Photo"
                   >
-                    <Camera size={14} />
-                  </button>
+                    <Camera size={16} />
+                  </motion.button>
                   <input 
                     type="file" accept="image/*" ref={fileRef} style={{ display:"none" }}
                     onChange={e => {
@@ -269,10 +287,13 @@ export default function Profile() {
                     }}
                   />
                 </div>
+                <p style={{ margin: "0 0 16px", fontSize: 12, fontWeight: 600, color: "var(--accent)", cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
+                  Click to Upload Profile Photo
+                </p>
                 <label style={P.fieldLabel}>Or select an emoji avatar</label>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8, justifyContent:"center", maxWidth:320 }}>
                   {AVATARS.map(a => (
-                    <button key={a} style={{ ...P.avatarBtn, ...(editForm.avatar===a && !editForm.photo ? P.avatarActive : {}) }} onClick={() => setEditForm(f => ({...f, avatar:a, photo:null}))}>{a}</button>
+                    <motion.button key={a} style={{ ...P.avatarBtn, ...(editForm.avatar===a && !editForm.photo ? P.avatarActive : {}) }} onClick={() => setEditForm(f => ({...f, avatar:a, photo:null}))} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>{a}</motion.button>
                   ))}
                 </div>
               </div>
@@ -284,8 +305,8 @@ export default function Profile() {
                 {saved && <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={P.savedMsg}>✅ Profile saved!</motion.div>}
               </AnimatePresence>
               <div style={{ display:"flex", gap:10 }}>
-                <button style={P.cancelBtn} onClick={() => setSection("overview")}>Cancel</button>
-                <button style={P.saveBtn} onClick={saveProfile}>Save Changes</button>
+                <motion.button style={P.cancelBtn} onClick={() => setSection("overview")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Cancel</motion.button>
+                <motion.button style={P.saveBtn} onClick={saveProfile} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Save Changes</motion.button>
               </div>
             </div>
           )}
@@ -318,16 +339,16 @@ export default function Profile() {
                 <p style={P.fieldLabel}>Quick Presets</p>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                   {PRESETS.map(p => (
-                    <button key={p} style={{ ...P.presetBtn, ...(budgetInput===String(p) ? P.presetActive : {}) }} onClick={() => setBudgetInput(String(p))}>
+                    <motion.button key={p} style={{ ...P.presetBtn, ...(budgetInput===String(p) ? P.presetActive : {}) }} onClick={() => setBudgetInput(String(p))} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       PKR {p.toLocaleString()}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
               <AnimatePresence>{saved && <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={P.savedMsg}>✅ Budget updated!</motion.div>}</AnimatePresence>
               <div style={{ display:"flex", gap:10 }}>
-                <button style={P.cancelBtn} onClick={() => setSection("overview")}>Cancel</button>
-                <button style={P.saveBtn} onClick={saveBudget}>💰 Set Budget</button>
+                <motion.button style={P.cancelBtn} onClick={() => setSection("overview")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Cancel</motion.button>
+                <motion.button style={P.saveBtn} onClick={saveBudget} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>💰 Set Budget</motion.button>
               </div>
             </div>
           )}
@@ -357,28 +378,30 @@ export default function Profile() {
               <div style={{ marginBottom:20 }}>
                 <label style={P.fieldLabel}>Choose an Emoji Icon</label>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                  {['🍔', '🚌', '📚', '💊', '🎮', '👕', '🎬', '✈️', '🏋️', '🎓', '🏠', '💻', '🚗', '⚽', '🎪', '📱'].map(emoji => (
-                    <button 
+                  {['🍔','🍕','🍜','☕','🥤','🛒','🚌','🚗','🏍️','⛽','📚','📖','💊','🏥','🎮','🎬','👕','👟','👜','✈️','🏋️','🎓','🏠','🏢','💻','📱','⚽','🎪','💡','💰','🎁','🐾','👶','💄','🔧','🎵','📦','🧹','🏖️','📌'].map(emoji => (
+                    <motion.button 
                       key={emoji}
                       style={{ 
                         ...P.emojiBtn, 
                         ...(newCategory.icon===emoji ? { border:"2px solid var(--accent)", background:"var(--accent-subtle)" } : {})
                       }} 
                       onClick={() => setNewCategory({...newCategory, icon:emoji})}
+                      whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
                     >
                       {emoji}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
 
-              <button 
+              <motion.button 
                 style={{ ...P.saveBtn, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
                 onClick={createNewCategory}
                 disabled={categoryLoading}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               >
                 <Plus size={16} /> {categoryLoading ? 'Adding...' : 'Add New Category'}
-              </button>
+              </motion.button>
 
               <div style={{ marginTop:28, borderTop:"1px solid var(--border)", paddingTop:20 }}>
                 <h4 style={{ margin:"0 0 12px", fontSize:14, fontWeight:700, color:"var(--text-primary)" }}>Existing Categories</h4>
@@ -394,22 +417,56 @@ export default function Profile() {
             </div>
           )}
 
+          {/* ── APPEARANCE ── */}
+          {section==="appearance" && (
+            <div style={P.card}>
+              <h3 style={P.cardTitle}>Interface Theme</h3>
+              <p style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:20 }}>Customize the look and feel of your app.</p>
+              
+              <div style={{ marginBottom: 24 }}>
+                <h4 style={{ fontSize:13, fontWeight:600, color:"var(--text-primary)", marginBottom:10 }}>Color Mode</h4>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={() => theme === "light" ? toggleTheme() : null} style={{ flex:1, padding:"12px", borderRadius:10, border:`2px solid ${theme==="dark"?"var(--accent)":"var(--border)"}`, background:"var(--bg-primary)", color:"var(--text-primary)", fontWeight:600, cursor:"pointer", transition: "all 0.2s" }}>🌙 Dark Mode</button>
+                  <button onClick={() => theme === "dark" ? toggleTheme() : null} style={{ flex:1, padding:"12px", borderRadius:10, border:`2px solid ${theme==="light"?"var(--accent)":"var(--border)"}`, background:"#f5f6fa", color:"#1a1d2e", fontWeight:600, cursor:"pointer", transition: "all 0.2s" }}>☀️ Light Mode</button>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize:13, fontWeight:600, color:"var(--text-primary)", marginBottom:10 }}>Accent Color</h4>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(100px, 1fr))", gap:10 }}>
+                  {[
+                    { id:"orange", name:"Dark Orange", hex:"#f59e0b" },
+                    { id:"blue", name:"Midnight Blue", hex:"#3b82f6" },
+                    { id:"emerald", name:"Emerald Green", hex:"#10b981" },
+                    { id:"rose", name:"Rose Gold", hex:"#f43f5e" },
+                    { id:"purple", name:"Royal Purple", hex:"#8b5cf6" }
+                  ].map(c => (
+                    <button key={c.id} onClick={() => setAccent(c.id)} style={{ padding:"12px 8px", borderRadius:10, border:`2px solid ${accent===c.id?c.hex:"var(--border)"}`, background:accent===c.id?`${c.hex}1A`:"var(--bg-input)", color:"var(--text-primary)", display:"flex", flexDirection:"column", alignItems:"center", gap:8, cursor:"pointer", transition:"all 0.2s" }}>
+                      <span style={{ width:24, height:24, borderRadius:"50%", background:c.hex, boxShadow:`0 0 10px ${c.hex}80` }} />
+                      <span style={{ fontSize:11, fontWeight:600 }}>{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── DANGER/ACCOUNT ── */}
           {section==="danger" && (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               <div style={P.card}>
                 <h3 style={P.cardTitle}>Sample Data</h3>
                 <p style={{ fontSize:13, color:"var(--text-secondary)", margin:"0 0 14px" }}>Load sample expenses to explore the app's features before adding your own data.</p>
-                <button style={P.dangerBtn2} onClick={() => {
+                <motion.button style={P.dangerBtn2} onClick={() => {
                   if (expenses.length === 0) {
                     SEED_EXPENSES.forEach(e => addExpense(e));
                   }
-                }}><DownloadCloud size={16} style={{ marginRight:8 }} />Load Sample Expenses</button>
+                }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><DownloadCloud size={16} style={{ marginRight:8 }} />Load Sample Expenses</motion.button>
               </div>
               <div style={{ ...P.card, border:"1px solid var(--red)" }}>
                 <h3 style={{ ...P.cardTitle, color:"var(--red)" }}>Sign Out</h3>
                 <p style={{ fontSize:13, color:"var(--text-secondary)", margin:"0 0 14px" }}>You'll be signed out of your account on this device. Your data will be saved.</p>
-                <button style={P.dangerBtn} onClick={logout}><LogOut size={16} style={{ marginRight:8 }} />Sign Out</button>
+                <motion.button style={P.dangerBtn} onClick={logout} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><LogOut size={16} style={{ marginRight:8 }} />Sign Out</motion.button>
               </div>
             </div>
           )}
@@ -423,7 +480,8 @@ const P = {
   root:         { padding:20, display:"flex", flexDirection:"column", gap:14, maxWidth:720, margin:"0 auto" },
   heroCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:20, padding:"28px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:20, flexWrap:"wrap", boxShadow:"var(--shadow-sm)" },
   heroLeft:     { display:"flex", alignItems:"center", gap:20 },
-  avatarWrap:   { width:84, height:84, borderRadius:"50%", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, flexShrink:0, border:"3px solid var(--bg-card)", boxShadow:"0 0 0 2px var(--border)", overflow:"hidden" },
+  avatarWrap:   { width:84, height:84, borderRadius:"50%", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, flexShrink:0, border:"3px solid var(--bg-card)", boxShadow:"0 0 0 2px var(--border)", overflow:"hidden", position: "relative" },
+  avatarOverlay: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", opacity: 0, transition: "opacity 0.2s" },
   userName:     { margin:0, fontSize:20, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
   userEmail:    { margin:"3px 0 2px", fontSize:13, color:"var(--text-muted)" },
   userMeta:     { margin:"0 0 2px", fontSize:12, color:"var(--text-secondary)" },
@@ -452,7 +510,8 @@ const P = {
   budgetInputRow:{ display:"flex", alignItems:"center", gap:8, background:"var(--bg-input)", border:"2px solid var(--accent-subtle)", borderRadius:12, padding:"12px 16px", marginBottom:20, transition:"border-color 0.2s" },
   presetBtn:    { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontFamily:"var(--font)", transition:"all 0.2s" },
   presetActive: { background:"var(--accent-subtle)", border:"1px solid var(--accent)", color:"var(--accent)", fontWeight:600 },
-  dangerBtn:    { display:"flex", alignItems:"center", justifyContent:"center", background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", padding:"12px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"var(--font)", transition:"background 0.2s" },
+  dangerBtn:    { width:"100%", padding:"12px", background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
+  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
   dangerBtn2:   { display:"flex", alignItems:"center", justifyContent:"center", background:"var(--blue-bg)", border:"1px solid var(--blue)", color:"var(--blue)", padding:"12px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"var(--font)", transition:"background 0.2s" },
   emojiBtn:     { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"10px", fontSize:20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" },
 };

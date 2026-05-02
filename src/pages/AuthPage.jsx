@@ -66,13 +66,14 @@ export function LoginPage({ onBack, onSwitchToRegister }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const submit = async () => {
-    if (!form.email || !form.password) return setError("Please enter email and password.");
+    if (!form.email) return setError("invalid candidate");
+    if (!form.password) return setError("password error");
     setError(""); setLoading(true);
     
     try {
       await login(form.email.trim(), form.password);
     } catch (err) {
-      setError(err.message || "Failed to sign in.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }

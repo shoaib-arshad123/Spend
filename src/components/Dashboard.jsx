@@ -1,31 +1,82 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { formatPKR, getPredictionDays, classifyUser } from "../utils/helpers";
+import { formatPKR, getPredictionDays, classifyUser, getSmartAdvice } from "../utils/helpers";
+import { Brain, Lightbulb, TrendingUp, ShieldCheck, AlertCircle, PlusCircle, ArrowUpRight } from "lucide-react";
 import { getCategoryColor, getCategoryIcon } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
+// CelebrationPopup removed from here, moved to MainApp.jsx
 
+const COLORS = ["#f59e0b","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#06b6d4","#ef4444","#84cc16","#6366f1"];
+
+// 3D Tilt Card Component
+function TiltCard({ children, style, delay = 0 }) {
+  const ref = useRef(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 18 });
+  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 18 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.2, 0.2], ["3deg", "-3deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.2, 0.2], ["-3deg", "3deg"]);
+
+  const handleMouseMove = (e) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const xPct = mouseX / rect.width - 0.5;
+    const yPct = mouseY / rect.height - 0.5;
+    x.set(xPct * 0.8);
+    y.set(yPct * 0.8);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4, type: "spring" }}
+      style={{
+        ...style,
+        perspective: 1000,
+        transformStyle: "preserve-3d",
+        rotateX,
+        rotateY,
+      }}
+      whileHover={{ scale: 1.01, zIndex: 10, boxShadow: "0 14px 18px -8px rgba(0, 0, 0, 0.16)" }}
+    >
+      <div style={{ transform: "translateZ(30px)" }}>
+        {children}
+      </div>
+    </motion.div>
+  );
+}
 const TT = { contentStyle:{ background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:10, color:"var(--text-primary)", fontSize:12 }, cursor:{ fill:"rgba(255,255,255,0.04)" } };
 
 function getLast7Days(expenses) {
-  return Array.from({ length:7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (6-i));
-    const ds = d.toISOString().slice(0,10);
-    return { day:["Su","Mo","Tu","We","Th","Fr","Sa"][d.getDay()], amount: expenses.filter(e => e.date===ds).reduce((s,e)=>s+e.amount,0), isToday: i===6 };
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const ds = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return {
+      day: label,
+      amount: expenses.filter(e => e.date === ds).reduce((s, e) => s + e.amount, 0),
+      isToday: i === 6,
+    };
   });
-}
-
-function getLast30Area(expenses) {
-  let cum = 0;
-  return Array.from({ length:30 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate()-(29-i));
-    const ds = d.toISOString().slice(0,10);
-    const day = expenses.filter(e=>e.date===ds).reduce((s,e)=>s+e.amount,0);
-    cum += day; return { day: i+1, amount:day, cumulative:cum };
-  }).filter((_,i) => i%3===0 || i===29);
 }
 
 function EmptyState({ icon, title, desc, action, onAction }) {
@@ -41,20 +92,36 @@ function EmptyState({ icon, title, desc, action, onAction }) {
 
 const emptyBtn = { marginTop:6, background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"10px 22px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" };
 
+// Custom tooltip for pie chart showing category name + amount
+const CategoryTooltip = ({ active, payload }) => {
+  if (!active || !payload?.[0]) return null;
+  const { name, value } = payload[0];
+  const idx = payload[0]?.payload?.idx ?? 0;
+  return (
+    <div style={{ background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", boxShadow:"var(--shadow-md)" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+        <span style={{ width:10, height:10, borderRadius:"50%", background:COLORS[idx % COLORS.length], display:"inline-block" }} />
+        <span style={{ fontSize:13, fontWeight:700, color:"var(--text-primary)", textTransform:"capitalize" }}>{name}</span>
+      </div>
+      <span style={{ fontSize:12, color:"var(--accent)", fontWeight:600 }}>{formatPKR(value)}</span>
+    </div>
+  );
+};
+
 export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
-  const { expenses, categories } = useApp();
-  const totalSpent = expenses.reduce((s,e)=>s+e.amount,0);
-  const remaining  = budget - totalSpent;
-  const pct        = budget>0 ? Math.round((totalSpent/budget)*100) : 0;
-  const predDays   = getPredictionDays(expenses, budget);
-  const userType   = classifyUser(totalSpent, budget);
+    monthlyBreakdown, lang, budget: appBudget, allTimeBudget, isLoading, dueSubscriptions, goals = [], recurring = [] } = useApp();
+
+  const totalSpent = monthlySpent;
+  const remaining  = monthlyRemaining;
+  const pct        = effectiveMonthlyBudget>0 ? Math.round((totalSpent/effectiveMonthlyBudget)*100) : 0;
+  const predDays   = getPredictionDays(monthlyExpenses, effectiveMonthlyBudget);
+  const userType   = classifyUser(totalSpent, effectiveMonthlyBudget);
   const barData    = getLast7Days(expenses);
-  const areaData   = getLast30Area(expenses);
   const catMap     = {};
-  expenses.forEach(e => { catMap[e.category]=(catMap[e.category]||0)+e.amount; });
-  const pieData    = Object.entries(catMap).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);
+  monthlyExpenses.forEach(e => { catMap[e.category]=(catMap[e.category]||0)+e.amount; });
+  const pieData    = Object.entries(catMap).map(([name,value], idx)=>({name,value,idx})).sort((a,b)=>b.value-a.value);
+  const topCategories = pieData.slice(0, 6);
   
-  // Sort by date and then by createdAt (most recent first)
   const recent     = [...expenses].sort((a,b) => {
     const dDiff = new Date(b.date) - new Date(a.date);
     if (dDiff !== 0) return dDiff;
@@ -64,10 +131,46 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
   const typeInfo = { saver:{ label:"💚 Saver", color:"var(--green)" }, balanced:{ label:"🟡 Balanced", color:"var(--accent)" }, spender:{ label:"🔴 Spender", color:"var(--red)" } };
   const ti = typeInfo[userType];
 
-  // Helper to get icon for any category name
-  const getIcon = (catName) => categories.find(c => c.name === catName)?.icon || "📦";
+  const getIcon = (catName) => categories.find(c => c.name === catName)?.icon || getCategoryIcon(catName) || "📦";
 
-  // No expenses yet — show welcome state
+  // Financial Health summary logic
+  const activeGoals = (goals || []).filter(g => !g.isCompleted);
+  const topGoal = activeGoals.length > 0 ? activeGoals.reduce((a, b) => {
+    const aPct = a.targetAmount > 0 ? (a.savedAmount / a.targetAmount) : 0;
+    const bPct = b.targetAmount > 0 ? (b.savedAmount / b.targetAmount) : 0;
+    return aPct > bPct ? a : b;
+  }) : null;
+  const activeSubs = (recurring || []).filter(r => r.isActive);
+  const totalMonthlySubs = activeSubs.reduce((s, r) => {
+    const amt = Number(r.amount) || 0;
+    if (r.frequency === "daily") return s + amt * 30;
+    if (r.frequency === "weekly") return s + amt * 4.3;
+    if (r.frequency === "monthly") return s + amt;
+    return s;
+  }, 0);
+  const nextSub = activeSubs.length > 0 ? [...activeSubs].sort((a,b) => new Date(a.nextDueDate || 0) - new Date(b.nextDueDate || 0))[0] : null;
+
+  const getDaysUntil = (dateStr) => {
+    const diff = new Date(dateStr) - new Date();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  if (isLoading) {
+    return (
+      <div style={D.container}>
+        <div className="shimmer" style={{ height: 180, borderRadius: 20, marginBottom: 20 }} />
+        <div style={D.chartsGrid}>
+          <div className="shimmer" style={{ height: 280, borderRadius: 16 }} />
+          <div className="shimmer" style={{ height: 280, borderRadius: 16 }} />
+        </div>
+        <div style={{ ...D.chartsGrid, marginTop: 20 }}>
+          <div className="shimmer" style={{ height: 340, borderRadius: 16 }} />
+          <div className="shimmer" style={{ height: 340, borderRadius: 16 }} />
+        </div>
+      </div>
+    );
+  }
+
   if (expenses.length === 0) {
     return (
       <div style={D.container}>
@@ -76,8 +179,8 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
           <h2 style={D.welcomeTitle}>Welcome, you're all set!</h2>
           <p style={D.welcomeSub}>Your dashboard is empty. Start by setting your budget in Profile, then add your first expense.</p>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center", marginTop:8 }}>
-            <motion.button style={D.welcomeBtn} onClick={() => setActiveTab("addExpense")} whileHover={{ scale:1.04 }}>➕ Add First Expense</motion.button>
-            <motion.button style={D.welcomeBtnOutline} onClick={() => setActiveTab("profile")} whileHover={{ scale:1.04 }}>💰 Set Budget</motion.button>
+            <motion.button style={D.welcomeBtn} onClick={() => setActiveTab("addExpense")} whileHover={{ scale:1.02 }} whileTap={{ scale:0.96 }}>➕ Add First Expense</motion.button>
+            <motion.button style={D.welcomeBtnOutline} onClick={() => setActiveTab("profile")} whileHover={{ scale:1.02 }} whileTap={{ scale:0.96 }}>💰 Set Budget</motion.button>
           </div>
           <div style={D.quickTips}>
             {["🎙️ Use Voice Input to log expenses hands-free","📸 Scan a receipt photo to auto-detect amount","📊 Charts will appear here as you track"].map(tip => (
@@ -91,17 +194,71 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
 
   return (
     <div style={D.container}>
-      {/* ── Budget card ── */}
-      <motion.div style={D.budgetCard} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}>
+      {/* ⚠️ Due Subscriptions Alert */}
+      {dueSubscriptions > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={D.alertBanner}
+          onClick={() => setActiveTab("recurring")}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24 }}>🗓️</span>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111" }}>
+                You have {dueSubscriptions} subscription{dueSubscriptions > 1 ? 's' : ''} due today!
+              </p>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: "rgba(0,0,0,0.6)" }}>
+                Click here to process your payments and update your budget.
+              </p>
+            </div>
+          </div>
+          <span style={{ fontSize: 18 }}>➜</span>
+        </motion.div>
+      )}
+
+      {/* ── All-Time Overview Banner ── */}
+      <TiltCard style={D.allTimeBanner}>
+        <div style={D.allTimeHeader}>
+          <span style={{ fontSize:18 }}>📊</span>
+          <span style={{ fontSize:14, fontWeight:700, color:"var(--text-primary)" }}>All-Time Overview</span>
+        </div>
+        <div style={D.allTimeGrid}>
+          {[
+            { icon:"💰", label:"All-Time Spent", value:formatPKR(allTimeTotal), color:"var(--red)" },
+            { icon:"📅", label:"Days Tracked", value:`${totalTrackingDays}`, color:"var(--blue)" },
+            { icon:"⏳", label:"Days Active", value:`${daysSinceFirstExpense}`, color:"var(--purple)" },
+            { icon:"📝", label:"Total Transactions", value:`${expenses.length}`, color:"var(--accent)" },
+            { icon:"📈", label:"All-Time Budget", value:formatPKR(allTimeBudget), color:"var(--cyan)" },
+          ].map((s, i) => (
+            <motion.div key={s.label} style={D.allTimeStat} whileHover={{ y:-2, boxShadow:"var(--shadow-md)" }} transition={{ duration:0.15 }}>
+              <span style={{ fontSize:16 }}>{s.icon}</span>
+              <p style={{ margin:"4px 0 2px", fontSize:14, fontWeight:800, color:s.color, letterSpacing:"-0.3px" }}>{s.value}</p>
+              <p style={{ margin:0, fontSize:10, color:"var(--text-muted)" }}>{s.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </TiltCard>
+
+      {/* ── Monthly Budget card ── */}
+      <TiltCard style={D.budgetCard} delay={0.1}>
         <div style={D.budgetTop}>
           <div>
-            <p style={D.budgetLabel}>Monthly Budget</p>
-            <p style={D.budgetValue}>{formatPKR(budget)}</p>
+            <p style={D.budgetLabel}>This Month's Budget</p>
+            <p style={D.budgetValue}>{formatPKR(effectiveMonthlyBudget)}</p>
+            {previousMonthCarryOver > 0 && (
+              <p style={{ margin:"2px 0 0", fontSize:10, color:"var(--green)" }}>
+                +{formatPKR(previousMonthCarryOver)} carried from last month
+              </p>
+            )}
           </div>
           <div style={{ textAlign:"right" }}>
             <p style={D.budgetLabel}>Remaining</p>
             <p style={{ ...D.budgetValue, color: remaining>=0?"var(--green)":"var(--red)" }}>{formatPKR(Math.abs(remaining))}{remaining<0?" over":""}</p>
           </div>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, color: remaining >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
+          {remaining >= 0 ? "On track for this month" : "Over budget this month"}
         </div>
         <div style={D.progressTrack}>
           <motion.div
@@ -112,39 +269,138 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
           />
         </div>
         <div style={D.budgetFooter}>
-          <span style={{ fontSize:12, color:"var(--text-muted)" }}>{pct}% used · <span style={{ color:ti.color }}>{ti.label}</span></span>
+          <span style={{ fontSize:12, color:"var(--text-muted)" }}>{pct}% used · <span style={{ color:ti.color }}>{ti.label}</span> · Monthly resets each month</span>
           {predDays !== null && (
             <span style={{ fontSize:12, color: predDays<5?"var(--red)":predDays<10?"var(--accent)":"var(--text-muted)" }}>
               {predDays<1 ? "⚠️ Budget exhausted" : `⏱ ~${predDays} days left`}
             </span>
           )}
         </div>
-      </motion.div>
+      </TiltCard>
+
+      {/* ── AI Analysis Summary Card ── */}
+      {expenses.length >= 3 && (
+        <TiltCard style={{ ...D.overviewCard, background:"linear-gradient(135deg, var(--bg-card), var(--bg-input))", border:"1px solid var(--accent-subtle)" }} delay={0.15}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:36, height:36, borderRadius:"50%", background:"var(--accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Brain size={20} color="var(--accent)" />
+              </div>
+              <h3 style={{ ...D.chartTitle, margin:0 }}>AI Financial Insights</h3>
+            </div>
+            <motion.button style={D.smallBtn} onClick={() => setActiveTab("advice")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>Deep Analysis</motion.button>
+          </div>
+          
+          <div style={{ display:"flex", gap:20, alignItems:"center", flexWrap:"wrap" }}>
+            <div style={{ flex:1, minWidth:200 }}>
+              <div style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+                <Lightbulb size={14} color="var(--accent)" />
+                <span>Current Recommendation</span>
+              </div>
+              <p style={{ margin:0, fontSize:15, fontWeight:600, color:"var(--text-primary)", lineHeight:1.4 }}>
+                {getSmartAdvice(expenses, lang)[0] || "Continue tracking to get personalized tips!"}
+              </p>
+            </div>
+            
+            <div style={{ textAlign:"right", paddingLeft:16, borderLeft:"1px solid var(--border)" }}>
+              <div style={{ fontSize:11, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:1 }}>Spending Score</div>
+              <div style={{ fontSize:28, fontWeight:900, color: pct<60?"var(--green)":pct<90?"var(--accent)":"var(--red)", marginTop:2 }}>
+                {Math.max(0, 100 - Math.round(pct))}<span style={{ fontSize:14, fontWeight:600, opacity:0.7 }}>/100</span>
+              </div>
+            </div>
+          </div>
+        </TiltCard>
+      )}
+
+      {/* ── Financial Health: Goals & Subscriptions ── */}
+      <div style={D.chartsGrid}>
+        {/* Goals Progress Card */}
+        <TiltCard style={D.overviewCard} delay={0.2}>
+          <div style={D.cardHeader}>
+            <h3 style={D.chartTitle}>🎯 Savings Goals</h3>
+            <motion.button style={D.smallBtn} onClick={() => setActiveTab("goals")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>Manage</motion.button>
+          </div>
+          <div style={D.goalsList}>
+            {activeGoals.length > 0 ? (
+              activeGoals.slice(0, 3).map(g => {
+                const gp = Math.round((g.savedAmount / g.targetAmount) * 100);
+                return (
+                  <div key={g.id} style={D.goalItem}>
+                    <div style={D.goalTop}>
+                      <span style={{ fontSize:16 }}>{g.category === "Travel" ? "✈️" : g.category === "Gadgets" ? "💻" : g.category === "Emergency Fund" ? "🛡️" : "🎯"}</span>
+                      <span style={D.goalName}>{g.name}</span>
+                      <span style={D.goalPct}>{gp}%</span>
+                    </div>
+                    <div style={D.progressBarBg}>
+                      <motion.div style={{ ...D.progressBar, width:`${Math.min(gp,100)}%`, background: gp>=100?"var(--green)":"var(--accent)" }} 
+                        initial={{ width: 0 }} animate={{ width: `${Math.min(gp,100)}%` }} transition={{ duration:1 }} />
+                    </div>
+                    <p style={D.goalSub}>{formatPKR(g.savedAmount)} / {formatPKR(g.targetAmount)}</p>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={D.emptyStateSmall}>No active goals. Set one to start saving!</div>
+            )}
+          </div>
+        </TiltCard>
+
+        {/* Subscriptions Card */}
+        <TiltCard style={D.overviewCard} delay={0.3}>
+          <div style={D.cardHeader}>
+            <h3 style={D.chartTitle}>🗓️ Upcoming Bills</h3>
+            <motion.button style={D.smallBtn} onClick={() => setActiveTab("recurring")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>View All</motion.button>
+          </div>
+          <div style={D.subsList}>
+            {activeSubs.length > 0 ? (
+              [...activeSubs].sort((a,b) => new Date(a.nextDueDate) - new Date(b.nextDueDate)).slice(0, 3).map(s => {
+                const days = getDaysUntil(s.nextDueDate);
+                return (
+                  <div key={s.id} style={D.subItem}>
+                    <div style={D.subIcon}>{s.category === "entertainment" ? "🎬" : s.category === "transport" ? "🚗" : "📦"}</div>
+                    <div style={{ flex:1 }}>
+                      <p style={D.subName}>{s.description || s.category}</p>
+                      <p style={D.subDetail}>{formatPKR(s.amount)} · {s.frequency}</p>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <p style={{ ...D.subStatus, color: days <= 2 ? "var(--red)" : "var(--text-muted)" }}>
+                        {days <= 0 ? "Due Today" : `In ${days} days`}
+                      </p>
+                      <p style={D.subDate}>{new Date(s.nextDueDate).toLocaleDateString(undefined, { month:'short', day:'numeric' })}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={D.emptyStateSmall}>No active subscriptions.</div>
+            )}
+          </div>
+        </TiltCard>
+      </div>
 
       {/* ── Stat cards ── */}
       <div style={D.statsRow}>
         {[
-          { icon:"💸", label:t.totalSpent,   value:formatPKR(totalSpent), color:"var(--red)",    sub:`${expenses.length} transactions` },
+          { icon:"💸", label:"Month Spent",  value:formatPKR(totalSpent), color:"var(--red)",    sub:`${monthlyExpenses.length} this month` },
           { icon:"💰", label:t.remaining,     value:formatPKR(Math.max(remaining,0)), color:"var(--green)", sub: pct>=100 ? "Budget exceeded!" : `${100-pct}% free` },
           { icon:"📊", label:"Avg / Day",     value:formatPKR(Math.round(totalSpent/Math.max(new Date().getDate(),1))), color:"var(--blue)", sub:"This month" },
           { icon:"🔥", label:"Day Streak",    value:`${computeStreak(expenses)} days`, color:"var(--orange)", sub:"Keep it up!" },
         ].map((s,i) => (
-          <motion.div key={s.label} style={D.statCard} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.06 }} whileHover={{ y:-3 }}>
+          <TiltCard key={s.label} style={D.statCard} delay={0.2 + i * 0.05}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <span style={{ fontSize:22 }}>{s.icon}</span>
               <span style={{ fontSize:10, color:"var(--text-muted)", background:"var(--bg-input)", padding:"2px 7px", borderRadius:10 }}>{s.sub}</span>
             </div>
             <p style={{ ...D.statValue, color:s.color }}>{s.value}</p>
             <p style={D.statLabel}>{s.label}</p>
-          </motion.div>
+          </TiltCard>
         ))}
       </div>
 
       {/* ── Charts row ── */}
       <div style={D.chartsGrid}>
-        {/* Bar chart */}
-        <div style={D.chartCard}>
-          <h3 style={D.chartTitle}>📅 {t.weeklySpending}</h3>
+        <TiltCard style={D.chartCard} delay={0.3}>
+          <h3 style={D.chartTitle}>📅 Last 7 Days</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={barData} margin={{ top:4, right:6, left:-24, bottom:0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false} />
@@ -158,25 +414,25 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </TiltCard>
 
-        {/* Donut */}
-        <div style={D.chartCard}>
+        {/* Donut with per-category colors & tooltip */}
+        <TiltCard style={D.chartCard} delay={0.4}>
           <h3 style={D.chartTitle}>🥧 {t.categoryBreakdown}</h3>
           {pieData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={68} paddingAngle={3} dataKey="value" startAngle={90} endAngle={-270}>
-                    {pieData.map((e,i) => <Cell key={i} fill="var(--accent)" />)}
+                    {pieData.map((e,i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />)}
                   </Pie>
-                  <Tooltip {...TT} formatter={v=>[`PKR ${v.toLocaleString()}`]} />
+                  <Tooltip content={<CategoryTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div style={D.legend}>
-                {pieData.slice(0,5).map(e => (
+                {pieData.slice(0,6).map((e, i) => (
                   <div key={e.name} style={D.legendItem}>
-                    <span style={{ width:8, height:8, borderRadius:"50%", background:"var(--accent)", flexShrink:0 }} />
+                    <span style={{ width:8, height:8, borderRadius:"50%", background:COLORS[i % COLORS.length], flexShrink:0 }} />
                     <span style={{ fontSize:11, color:"var(--text-secondary)" }}>{getIcon(e.name)} {e.name}</span>
                     <span style={{ fontSize:11, color:"var(--text-muted)", marginLeft:"auto" }}>{formatPKR(e.value)}</span>
                   </div>
@@ -184,36 +440,101 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               </div>
             </>
           ) : <EmptyState icon="🥧" title="No data yet" desc="Add expenses to see category breakdown" />}
-        </div>
+        </TiltCard>
+
+        <TiltCard style={D.chartCard} delay={0.5}>
+          <h3 style={D.chartTitle}>📊 Top Spending Categories</h3>
+          {topCategories.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={topCategories} layout="vertical" margin={{ top:8, right:10, left:12, bottom:6 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false} horizontal={false} />
+                <XAxis type="number" tick={{ fill:"var(--text-muted)", fontSize:10 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill:"var(--text-muted)", fontSize:10 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip {...TT} formatter={v=>[`PKR ${v.toLocaleString()}`,"Spent"]} />
+                <Bar dataKey="value" radius={[5,5,5,5]} fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState icon="📊" title="No category spend data" desc="Add expenses to populate this chart." />
+          )}
+        </TiltCard>
       </div>
 
-      {/* ── Area chart ── */}
-      <div style={D.chartCard}>
-        <h3 style={D.chartTitle}>📈 Cumulative Spending — Last 30 Days</h3>
-        <ResponsiveContainer width="100%" height={160}>
-          <AreaChart data={areaData} margin={{ top:5, right:10, left:-20, bottom:0 }}>
-            <defs>
-              <linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-            <XAxis dataKey="day" tick={{ fill:"var(--text-muted)", fontSize:10 }} tickFormatter={v=>`D${v}`} />
-            <YAxis tick={{ fill:"var(--text-muted)", fontSize:10 }} />
-            <Tooltip {...TT} formatter={v=>[`PKR ${v.toLocaleString()}`]} />
-            <Area type="monotone" dataKey="cumulative" stroke="#f59e0b" strokeWidth={2} fill="url(#cGrad)" dot={false} />
-            {budget>0 && <Area type="monotone" dataKey={()=>budget} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1} fill="none" dot={false} name="Budget" />}
-          </AreaChart>
-        </ResponsiveContainer>
-        {budget>0 && <p style={{ margin:"4px 0 0", fontSize:11, color:"var(--red)", textAlign:"right" }}>— Budget limit {formatPKR(budget)}</p>}
+      {/* ── Financial Health Summary ── */}
+      <div style={D.statsRow}>
+        <TiltCard style={{ ...D.statCard, flex: 1, borderLeft: "4px solid var(--accent)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+            <div>
+              <p style={D.statLabel}>Monthly Subscriptions</p>
+              <p style={D.statValue}>{formatPKR(Math.round(totalMonthlySubs))}</p>
+            </div>
+            <span style={{ fontSize: 20 }}>🔄</span>
+          </div>
+          {nextSub && (
+            <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--text-muted)" }}>
+              Next: <span style={{ color: "var(--accent)" }}>{nextSub.description}</span> on {new Date(nextSub.nextDueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </p>
+          )}
+        </TiltCard>
+
+        <TiltCard style={{ ...D.statCard, flex: 1, borderLeft: "4px solid var(--green)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+            <div>
+              <p style={D.statLabel}>Top Savings Goal</p>
+              <p style={{ ...D.statValue, color: "var(--green)" }}>
+                {topGoal ? Math.round((topGoal.savedAmount / topGoal.targetAmount) * 100) : 0}%
+              </p>
+            </div>
+            <span style={{ fontSize: 20 }}>🎯</span>
+          </div>
+          {topGoal ? (
+            <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Toward: <span style={{ color: "var(--green)" }}>{topGoal.name}</span>
+            </p>
+          ) : (
+            <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--text-muted)" }}>No active goals</p>
+          )}
+        </TiltCard>
       </div>
+
+      {/* ── Monthly History Summary ── */}
+      {monthlyBreakdown.length > 1 && (
+        <TiltCard style={D.chartCard} delay={0.6}>
+          <h3 style={D.chartTitle}>📆 Monthly Spending History</h3>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {monthlyBreakdown.slice(0, 6).map((mo, i) => {
+              const displayBudget = mo.effectiveBudget;
+              const moPct = displayBudget > 0 ? Math.round((mo.spent / displayBudget) * 100) : 0;
+              const isCurrent = i === 0;
+              return (
+                <motion.div key={mo.month} style={{ background: isCurrent ? "var(--accent-subtle)" : "var(--bg-input)", border: isCurrent ? "1px solid var(--accent)" : "1px solid var(--border-light)", borderRadius:10, padding:"12px 14px" }}
+                  initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:i*0.05 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:"var(--text-primary)" }}>
+                      {isCurrent && "📍 "}{mo.label}
+                    </span>
+                    <div style={{ display:"flex", gap:12 }}>
+                      <span style={{ fontSize:12, color:"var(--red)", fontWeight:600 }}>{formatPKR(mo.spent)}</span>
+                      {displayBudget > 0 && <span style={{ fontSize:11, color:"var(--green)" }}>+{formatPKR(mo.remaining)} left</span>}
+                    </div>
+                  </div>
+                  {displayBudget > 0 && (
+                    <div style={{ height:4, background:"var(--border)", borderRadius:2 }}>
+                      <motion.div style={{ height:"100%", borderRadius:2, background: moPct>=100?"var(--red)":moPct>=80?"#f59e0b":"var(--green)" }} initial={{ width:0 }} animate={{ width:`${Math.min(moPct,100)}%` }} transition={{ duration:0.6 }} />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </TiltCard>
+      )}
 
       {/* ── Recent expenses ── */}
-      <div style={D.chartCard}>
+      <TiltCard style={D.chartCard} delay={0.7}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <h3 style={D.chartTitle}>{t.recentExpenses}</h3>
-          <button style={D.viewAllBtn} onClick={() => setActiveTab("history")}>{t.viewAll} →</button>
+          <motion.button style={D.viewAllBtn} onClick={() => setActiveTab("history")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>{t.viewAll} →</motion.button>
         </div>
         {recent.length === 0 ? (
           <EmptyState icon="📭" title="No expenses yet" desc="Add your first expense to see it here" action="➕ Add Expense" onAction={() => setActiveTab("addExpense")} />
@@ -224,12 +545,14 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <p style={D.recentNote}>{exp.description || exp.category}</p>
-              <p style={D.recentMeta}>{new Date(exp.date).toLocaleDateString()} · {exp.time || ""}</p>
+              <p style={D.recentMeta}>TXN-{exp.id} · {new Date(exp.date).toLocaleDateString()} · {new Date(exp.createdAt || exp.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
             <span style={D.recentAmt}>−{formatPKR(exp.amount)}</span>
           </div>
         ))}
-      </div>
+      </TiltCard>
+
+      {/* Celebration Popup moved to MainApp.jsx */}
     </div>
   );
 }
@@ -247,6 +570,7 @@ function computeStreak(expenses) {
 
 const D = {
   container:      { padding:18, display:"flex", flexDirection:"column", gap:14, maxWidth:900, margin:"0 auto" },
+  rolloverNotice: { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"14px 18px", color:"var(--text-primary)", fontSize:13, display:"flex", alignItems:"center", gap:8 },
   welcomeCard:    { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:18, padding:"40px 32px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12 },
   welcomeTitle:   { margin:0, fontSize:24, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
   welcomeSub:     { margin:0, fontSize:14, color:"var(--text-secondary)", maxWidth:400, lineHeight:1.7 },
@@ -254,6 +578,12 @@ const D = {
   welcomeBtnOutline:{ background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"11px 22px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)" },
   quickTips:      { display:"flex", flexDirection:"column", gap:8, marginTop:10, width:"100%", maxWidth:360 },
   quickTip:       { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 14px", fontSize:12, color:"var(--text-secondary)", textAlign:"left" },
+  // All-time banner
+  allTimeBanner:  { background:"linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)", border:"1px solid var(--border)", borderRadius:16, padding:"18px 20px" },
+  allTimeHeader:  { display:"flex", alignItems:"center", gap:8, marginBottom:14 },
+  allTimeGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:8 },
+  allTimeStat:    { background:"var(--bg-input)", borderRadius:10, padding:"10px 12px", textAlign:"center", transition:"all 0.2s" },
+  // Budget card
   budgetCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px" },
   budgetTop:      { display:"flex", justifyContent:"space-between", marginBottom:14 },
   budgetLabel:    { margin:"0 0 2px", fontSize:11, color:"var(--text-muted)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" },
@@ -264,7 +594,26 @@ const D = {
   statCard:       { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, padding:"14px 14px", display:"flex", flexDirection:"column", gap:4 },
   statValue:      { margin:0, fontSize:17, fontWeight:800, letterSpacing:"-0.5px" },
   statLabel:      { margin:0, fontSize:11, color:"var(--text-muted)", fontWeight:500 },
-  chartsGrid:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:14 },
+  cardHeader:     { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 },
+  smallBtn:       { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", fontSize:10, fontWeight:600, padding:"4px 10px", borderRadius:6, cursor:"pointer" },
+  goalsList:      { display:"flex", flexDirection:"column", gap:12 },
+  goalItem:       { },
+  goalTop:        { display:"flex", alignItems:"center", gap:8, marginBottom:4 },
+  goalName:       { flex:1, fontSize:13, fontWeight:600, color:"var(--text-primary)" },
+  goalPct:        { fontSize:12, fontWeight:700, color:"var(--accent)" },
+  progressBarBg:  { height:6, background:"var(--border)", borderRadius:3, overflow:"hidden" },
+  progressBar:    { height:"100%", borderRadius:3 },
+  goalSub:        { margin:"4px 0 0", fontSize:10, color:"var(--text-muted)" },
+  subsList:       { display:"flex", flexDirection:"column", gap:10 },
+  subItem:        { display:"flex", alignItems:"center", gap:10, padding:"8px", background:"var(--bg-input)", borderRadius:10 },
+  subIcon:        { width:32, height:32, background:"var(--bg-elevated)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 },
+  subName:        { margin:0, fontSize:12, fontWeight:700, color:"var(--text-primary)" },
+  subDetail:      { margin:0, fontSize:10, color:"var(--text-muted)" },
+  subStatus:      { margin:0, fontSize:10, fontWeight:700 },
+  subDate:        { margin:0, fontSize:9, color:"var(--text-muted)" },
+  emptyStateSmall:{ textAlign:"center", padding:"20px 0", fontSize:12, color:"var(--text-muted)", fontStyle:"italic" },
+  chartsGrid:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:16, marginBottom:20 },
+  overviewCard:   { padding:18, background:"var(--bg-card)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"var(--shadow-sm)" },
   chartCard:      { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"16px 18px" },
   chartTitle:     { margin:"0 0 12px", fontSize:14, fontWeight:700, color:"var(--text-primary)" },
   legend:         { display:"flex", flexDirection:"column", gap:6, marginTop:10 },
@@ -275,4 +624,16 @@ const D = {
   recentMeta:     { margin:"2px 0 0", fontSize:11, color:"var(--text-muted)" },
   recentAmt:      { fontSize:13, color:"var(--red)", fontWeight:700, whiteSpace:"nowrap", flexShrink:0 },
   viewAllBtn:     { background:"transparent", border:"none", color:"var(--accent)", fontSize:12, cursor:"pointer", fontWeight:600, fontFamily:"var(--font)" },
+  alertBanner: {
+    background: "linear-gradient(135deg, #f59e0b, #f97316)",
+    borderRadius: 14,
+    padding: "14px 20px",
+    marginBottom: 20,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    cursor: "pointer",
+    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+  }
 };

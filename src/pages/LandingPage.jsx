@@ -118,15 +118,19 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             <span style={L.logoBadge}>BETA</span>
           </a>
           <div style={L.navLinks}>
-            {["Features","How It Works","Testimonials","FAQ"].map(l => (
-              <a key={l} href={`#${l.toLowerCase().replace(/ /g,"-")}`} style={L.navLink}>{l}</a>
+            {['Features','How It Works','Testimonials','FAQ'].map(l => (
+              <motion.a key={l} href={`#${l.toLowerCase().replace(/ /g,'-')}`} style={L.navLink} whileHover={{ scale:1.04, color:'var(--accent)' }}>
+                {l}
+              </motion.a>
             ))}
           </div>
           <div style={L.navCTAs}>
             <button style={L.themeToggleBtn} onClick={toggleTheme} aria-label="Toggle theme">
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button style={L.navLoginBtn} onClick={onLogin}>Sign In</button>
+            <motion.button style={L.navLoginBtn} onClick={onLogin} data-no-audio="true" whileHover={{ scale:1.02, backgroundColor:"rgba(255,255,255,0.08)" }} whileTap={{ scale:0.98 }}>
+              Sign In
+            </motion.button>
             <motion.button style={L.navRegBtn} onClick={onGetStarted} whileHover={{ scale:1.04 }} whileTap={{ scale:0.97 }}>
               Get Started Free
             </motion.button>
@@ -157,7 +161,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               <motion.button style={L.ctaPrimary} onClick={onGetStarted} whileHover={{ scale:1.04, boxShadow:"0 0 30px rgba(245,158,11,0.4)" }} whileTap={{ scale:0.97 }}>
                 🚀 Create Free Account
               </motion.button>
-              <motion.button style={L.ctaOutline} onClick={onLogin} whileHover={{ scale:1.02 }}>
+              <motion.button style={L.ctaOutline} onClick={onLogin} data-no-audio="true" whileHover={{ scale:1.02, backgroundColor:"rgba(255,255,255,0.06)" }} whileTap={{ scale:0.98 }}>
                 Sign In →
               </motion.button>
             </div>
@@ -295,7 +299,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             <motion.button style={L.ctaPrimary} onClick={onGetStarted} whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
               🚀 Create Free Account
             </motion.button>
-            <motion.button style={L.ctaOutline} onClick={onLogin} whileHover={{ scale:1.02 }}>
+            <motion.button style={L.ctaOutline} onClick={onLogin} data-no-audio="true" whileHover={{ scale:1.02, backgroundColor:"rgba(255,255,255,0.06)" }} whileTap={{ scale:0.98 }}>
               Sign In →
             </motion.button>
           </div>

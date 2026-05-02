@@ -1,13 +1,59 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 const AppContext = createContext(null);
-const API_URL = "http://localhost:4444/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4444/api";
 
 // Helper: get auth headers
 const authHeaders = (token) => ({
   "Content-Type": "application/json",
   ...(token ? { Authorization: `Bearer ${token}` } : {})
 });
+
+const getLocalDateKey = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const getLocalMonthKey = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const calculateNextDate = (current, freq) => {
+  const d = new Date(current);
+  if (freq === "daily") d.setDate(d.getDate() + 1);
+  else if (freq === "weekly") d.setDate(d.getDate() + 7);
+  else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
+  else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
+// Helper: Fetch with retry logic for rate limiting (429) errors
+const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
+  let lastError;
+  const signal = options.signal; // Preserve the signal
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      // If not rate limited, return the response
+      if (res.status !== 429) return res;
+      // If rate limited and not aborted, wait and retry
+      if (!signal?.aborted) {
+        lastError = res;
+        const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    } catch (err) {
+      // If aborted, re-throw immediately
+      if (err.name === 'AbortError') throw err;
+      lastError = err;
+      if (!signal?.aborted) {
+        const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  // After all retries, return last response or throw error
+  if (lastError instanceof Response) return lastError;
+  throw lastError;
+};
 
 export function AppProvider({ children }) {
   // Theme & Lang (Keep in LocalStorage for instant load)
@@ -17,6 +63,15 @@ export function AppProvider({ children }) {
     localStorage.setItem("sset_theme", theme);
   }, [theme]);
   const toggleTheme = useCallback(() => setThemeState(t => t === "dark" ? "light" : "dark"), []);
+
+  // Accent Color
+  const [accent, setAccentState] = useState(() => localStorage.getItem("sset_accent") || "orange");
+  useEffect(() => {
+    document.documentElement.setAttribute("data-accent", accent);
+    localStorage.setItem("sset_accent", accent);
+  }, [accent]);
+  const setAccent = useCallback((a) => setAccentState(a), []);
+
   const [lang, setLang] = useState("en");
 
   // Auth token
@@ -31,10 +86,96 @@ export function AppProvider({ children }) {
   // Data States
   const [expenses, setExpenses] = useState([]);
   const [budget, setBudgetState] = useState(0);
+  const [defaultBudget, setDefaultBudget] = useState(0);
+  const [budgetHistory, setBudgetHistory] = useState([]);
+  const [recurring, setRecurring] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [dueSubscriptions, setDueSubscriptions] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [celebrationReward, setCelebrationReward] = useState(null); // For badge unlock celebrations
+  const [unlockedBadges, setUnlockedBadges] = useState(() => 
+    JSON.parse(localStorage.getItem("sset_unlocked_badges") || "[]")
+  );
+  const hasNotifiedSubs = useRef(false);
+  const hasNotifiedGoals = useRef(false);
+  const processingSubsRef = useRef(new Set());
+  const audioCtxRef = useRef(null);
+
+  const ensureAudioContext = () => {
+    if (audioCtxRef.current) return audioCtxRef.current;
+    if (typeof window === "undefined" || !(window.AudioContext || window.webkitAudioContext)) return null;
+    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtxRef.current;
+  };
+
+  const playTone = useCallback((frequency, duration = 0.09, type = "sine", volume = 0.18) => {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = frequency;
+    gain.gain.value = volume;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+  }, []);
+
+  const playSequence = useCallback((notes = []) => {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+    let start = ctx.currentTime + 0.02;
+    notes.forEach(({ freq, dur = 0.08, type = "sine", vol = 0.15 }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = vol;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur);
+      gain.gain.setValueAtTime(vol, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      start += dur + 0.02;
+    });
+  }, []);
+
+  const triggerHaptic = useCallback((type = "click") => {
+    if (typeof window === "undefined" || !window.navigator?.vibrate) return;
+    try {
+      if (type === "success") window.navigator.vibrate([15, 30, 15]);
+      else if (type === "error" || type === "danger") window.navigator.vibrate([50, 50, 50]);
+      else if (type === "warning") window.navigator.vibrate([30, 40, 30]);
+      else window.navigator.vibrate(10); // standard click
+    } catch (e) { /* ignore */ }
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    playSequence([
+      { freq: 660, dur: 0.08, type: "sine", vol: 0.18 },
+      { freq: 880, dur: 0.08, type: "sine", vol: 0.17 },
+      { freq: 1040, dur: 0.1, type: "sine", vol: 0.16 }
+    ]);
+  }, [playSequence]);
+
+  const playJingle = useCallback(() => {
+    playSequence([
+      { freq: 523, dur: 0.12, type: "triangle", vol: 0.16 },
+      { freq: 659, dur: 0.12, type: "triangle", vol: 0.16 },
+      { freq: 784, dur: 0.16, type: "triangle", vol: 0.16 },
+      { freq: 880, dur: 0.18, type: "triangle", vol: 0.14 }
+    ]);
+  }, [playSequence]);
 
   // Persist token
   useEffect(() => {
@@ -48,55 +189,151 @@ export function AppProvider({ children }) {
     else localStorage.removeItem("sset_user");
   }, [user]);
 
-  // Fetch data from backend when user is logged in
-  useEffect(() => {
+  const refreshBudget = useCallback(async () => {
     if (!user || !token) return;
-
-    const headers = authHeaders(token);
-
-    // Fetch expenses
-    fetch(`${API_URL}/expenses`, { headers })
-      .then(res => res.json())
-      .then(data => { 
-        if (data.success) setExpenses(data.expenses || []); 
-        else if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
-      })
-      .catch(err => console.error("Error fetching expenses:", err));
-
-    // Fetch categories
-    fetch(`${API_URL}/categories`, { headers })
-      .then(res => res.json())
-      .then(data => { if (data.success) setCategories(data.categories || []); })
-      .catch(err => console.error("Error fetching categories:", err));
-
-    // Fetch budget
-    fetch(`${API_URL}/budget`, { headers })
-      .then(res => res.json())
-      .then(data => { if (data.success) setBudgetState(data.budget || 0); })
-      .catch(err => console.error("Error fetching budget:", err));
-
-    // Fetch notifications
-    fetch(`${API_URL}/notifications`, { headers })
-      .then(res => res.json())
-      .then(data => { if (data.success) setNotifications(data.notifications || []); })
-      .catch(err => console.error("Error fetching notifications:", err));
-
+    try {
+      const res = await fetchWithRetry(`${API_URL}/budget`, { headers: authHeaders(token) });
+      const data = await res.json();
+      if (data.success) {
+        setBudgetState(data.budget || 0);
+        setDefaultBudget(data.defaultBudget || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching budget:", err);
+    }
   }, [user, token]);
 
-  // Toasts
+  const refreshBudgetHistory = useCallback(async () => {
+    if (!user || !token) return;
+    try {
+      const res = await fetchWithRetry(`${API_URL}/budget/history`, { headers: authHeaders(token) });
+      const data = await res.json();
+      if (data.success) {
+        setBudgetHistory(data.history || []);
+      }
+    } catch (err) {
+      console.error("Error fetching budget history:", err);
+    }
+  }, [user, token]);
+
+  // Toasts - must be before logout, refreshRecurring, refreshGoals
   const pushToast = useCallback((toast) => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { ...toast, id }]);
+
+    if (toast.type === "success") {
+      triggerHaptic("success");
+    } else if (toast.type === "danger" || toast.type === "error") {
+      triggerHaptic("error");
+      playTone(300, 0.15, "sawtooth");
+    } else {
+      triggerHaptic("click");
+    }
+
     setTimeout(() => setToasts(prev => prev.filter(x => x.id !== id)), 3800);
-  }, []);
+  }, [triggerHaptic, playTone]);
 
   const pushNotification = useCallback((notif) => {
-    const n = { ...notif, id: Date.now(), createdAt: new Date().toISOString(), isRead: false };
+    const now = new Date().toISOString();
+    const n = { ...notif, id: Date.now(), createdAt: now, time: now, read: false, isRead: false };
+
     setNotifications(prev => [n, ...prev].slice(0, 60));
-  }, []);
+    playNotificationSound();
+    triggerHaptic(notif.type || "success");
+
+    if (token) {
+      fetch(`${API_URL}/notifications`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(notif)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) console.warn("Notification sync failed:", data.message);
+        })
+        .catch(err => console.error("Network error during notification sync:", err));
+    }
+
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      new Notification(n.title || "SpendSmart", {
+        body: n.message,
+        icon: "/logo.png"
+      });
+    }
+  }, [playNotificationSound, token, triggerHaptic]);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setExpenses([]);
+    setBudgetState(0);
+    setNotifications([]);
+    setCategories([]);
+    pushToast({ type: "info", message: "Logged out successfully." });
+  }, [pushToast]);
+
+  const refreshRecurring = useCallback(async () => {
+    if (!user || !token) return;
+    try {
+      const res = await fetchWithRetry(`${API_URL}/recurring`, { headers: authHeaders(token) });
+      const data = await res.json();
+      if (data.success) {
+        setRecurring((data.recurring || []).map(r => ({
+          ...r,
+          amount: Number(r.amount),
+          isActive: r.isActive === true || r.isActive === 1
+        })));
+      } else if (data.message === 'Invalid token') {
+        logout();
+      }
+    } catch (err) {
+      console.error("Error fetching recurring expenses:", err);
+    }
+  }, [logout, token, user]);
+
+  const refreshGoals = useCallback(async () => {
+    if (!user || !token) return;
+    try {
+      const res = await fetchWithRetry(`${API_URL}/goals`, { headers: authHeaders(token) });
+      const data = await res.json();
+      if (data.success) {
+        const mappedGoals = (data.goals || []).map(g => ({
+          ...g,
+          targetAmount: Number(g.targetAmount),
+          savedAmount: Number(g.savedAmount),
+          isCompleted: g.isCompleted === true || g.isCompleted === 1
+        }));
+        setGoals(mappedGoals);
+
+        const today = getLocalDateKey();
+        const lastGoalNotif = localStorage.getItem("last_notified_goals");
+        if (mappedGoals.length > 0 && lastGoalNotif !== today) {
+          const stagnant = mappedGoals.filter(g => (g.savedAmount || 0) === 0);
+          if (stagnant.length > 0) {
+            localStorage.setItem("last_notified_goals", today);
+            pushNotification({ title: "Saving Reminder 🎯", message: `You have ${stagnant.length} goals with no progress.`, type: "info", icon: "💰" });
+          }
+        }
+      } else if (data.message === 'Invalid token') {
+        logout();
+      }
+    } catch (err) {
+      console.error("Error fetching savings goals:", err);
+    }
+  }, [logout, pushNotification, token, user]);
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return false;
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      playJingle();
+      pushToast({ type: "success", message: "Notifications enabled! 🔔" });
+      return true;
+    }
+    return false;
+  }, [playJingle, pushToast]);
 
   // --- Auth Handlers ---
-
   const login = useCallback(async (email, password) => {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -104,7 +341,7 @@ export function AppProvider({ children }) {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    if (!data.success) throw new Error(data.message || "Login failed");
+    if (!data.success) throw new Error(data.message);
     setToken(data.token);
     setUser(data.user);
     pushToast({ type: "success", message: `Welcome back, ${data.user.name}!` });
@@ -121,11 +358,17 @@ export function AppProvider({ children }) {
     if (!data.success) throw new Error(data.message || "Registration failed");
     setToken(data.token);
     setUser(data.user);
+    setShowOnboarding(true);
+    pushNotification({ 
+      title: "Welcome to SpendSmart! 🚀", 
+      message: `Hi ${data.user.name}, we're excited to help you save more. Start by setting your monthly budget in Profile!`, 
+      type: "success", 
+      icon: "👋" 
+    });
     pushToast({ type: "success", message: `Welcome, ${data.user.name}!` });
     return data;
-  }, [pushToast]);
+  }, [pushToast, pushNotification]);
 
-  // Legacy local sign-in (for development/demo mode without backend)
   const localSignIn = useCallback((email, password, name = null) => {
     setUser({
       id: 1,
@@ -138,37 +381,66 @@ export function AppProvider({ children }) {
     pushToast({ type: "success", message: "Welcome back!" });
   }, [pushToast]);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    setExpenses([]);
-    setBudgetState(0);
-    setNotifications([]);
-    setCategories([]);
-    pushToast({ type: "info", message: "Logged out successfully." });
-  }, [pushToast]);
-
   // --- Expense Handlers ---
+  const addExpense = useCallback(async (exp, customNotification = null) => {
+    if (!user) {
+      pushToast({ type: "danger", message: "You must be signed in to add expenses." });
+      return false;
+    }
 
-  const addExpense = useCallback(async (exp) => {
-    if (!user) return;
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlySpent = expenses
+      .filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, e) => sum + Number(e.amount), 0);
+
+    const remaining = (budget || 0) - monthlySpent;
+
+    if (budget > 0 && Number(exp.amount) > remaining) {
+      triggerHaptic("error");
+      const msg = "Budget exceeded! Cannot add this expense.";
+      pushToast({ type: "danger", message: `❌ ${msg}` });
+      return { success: false, message: msg };
+    }
+
     try {
       const res = await fetch(`${API_URL}/expenses`, {
         method: "POST",
         headers: authHeaders(token),
-        body: JSON.stringify(exp)
+        body: JSON.stringify({ ...exp, userId: user.id })
       });
       const data = await res.json();
       if (!data.success) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
-        throw new Error(data.message);
+        return { success: false, message: data.message || "Failed to save expense" };
       }
-      setExpenses(prev => [{ ...exp, id: data.expense?.id || Date.now() }, ...prev]);
+      setExpenses(prev => [{ ...exp, id: data.expense?.id || Date.now(), amount: Number(exp.amount) }, ...prev]);
+      refreshBudget();
+
+      if (Number(exp.amount) >= 5000) {
+        pushNotification({
+          title: "Large Spending Alert",
+          message: `A large transaction of PKR ${Number(exp.amount).toLocaleString()} was recorded.`,
+          type: "warning",
+          icon: "⚠️"
+        });
+      }
+
       pushToast({ type: "success", message: `✅ PKR ${Number(exp.amount).toLocaleString()} added!` });
+      if (customNotification) {
+        pushNotification(customNotification);
+      } else {
+        pushNotification({ title: "Expense Added", message: `PKR ${Number(exp.amount).toLocaleString()} saved successfully.`, type: "success", icon: "💸" });
+      }
+      return { success: true };
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to save expense" });
+      return { success: false, message: "Network error. Please try again." };
     }
-  }, [user, token, pushToast]);
+  }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic]);
 
   const deleteExpense = useCallback(async (id) => {
     try {
@@ -177,11 +449,13 @@ export function AppProvider({ children }) {
         headers: authHeaders(token)
       });
       setExpenses(prev => prev.filter(e => e.id !== id));
+      refreshBudget();
       pushToast({ type: "warning", message: "🗑️ Expense deleted" });
+      pushNotification({ title: "Expense Deleted", message: "An expense was removed from your history.", type: "warning", icon: "🗑️" });
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to delete expense" });
     }
-  }, [token, pushToast]);
+  }, [token, pushToast, pushNotification, refreshBudget]);
 
   const editExpense = useCallback(async (id, updates) => {
     try {
@@ -191,14 +465,15 @@ export function AppProvider({ children }) {
         body: JSON.stringify(updates)
       });
       setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+      refreshBudget();
       pushToast({ type: "success", message: "✅ Expense updated!" });
+      pushNotification({ title: "Expense Updated", message: "Your expense was updated successfully.", type: "info", icon: "✏️" });
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to update expense" });
     }
-  }, [token, pushToast]);
+  }, [token, pushToast, pushNotification, refreshBudget]);
 
   // --- Budget Handler ---
-
   const setBudget = useCallback(async (val) => {
     const num = Number(val);
     if (!user) return;
@@ -214,14 +489,16 @@ export function AppProvider({ children }) {
         throw new Error(data.message);
       }
       setBudgetState(num);
+      await refreshBudgetHistory();
+      await refreshBudget();
       pushToast({ type: "success", message: `✅ Budget updated to PKR ${num.toLocaleString()}` });
+      pushNotification({ title: "Budget Updated", message: `Your monthly budget is now PKR ${num.toLocaleString()}.`, type: "success", icon: "💰" });
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to update budget" });
     }
-  }, [user, token, pushToast]);
+  }, [user, token, pushToast, pushNotification, refreshBudgetHistory, refreshBudget, logout]);
 
   // --- Profile Handler ---
-
   const updateProfile = useCallback(async (updates) => {
     if (!user) return;
     try {
@@ -235,15 +512,20 @@ export function AppProvider({ children }) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
         throw new Error(data.message);
       }
-      setUser(prev => ({ ...prev, ...data.user }));
+      setUser(prev => ({
+        ...prev,
+        ...data.user,
+        avatar: data.user.avatar !== undefined ? data.user.avatar : prev?.avatar,
+        photo: data.user.photo !== undefined ? data.user.photo : prev?.photo,
+      }));
       pushToast({ type: "success", message: "✅ Profile updated!" });
+      pushNotification({ title: "Profile Updated", message: "Your profile changes were saved.", type: "info", icon: "👤" });
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to update profile" });
     }
-  }, [user, token, pushToast]);
+  }, [user, token, pushToast, pushNotification, logout]);
 
   // --- Category Handler ---
-
   const addCategory = useCallback(async (name, icon) => {
     if (!user) return;
     try {
@@ -253,34 +535,337 @@ export function AppProvider({ children }) {
         body: JSON.stringify({ name, icon })
       });
       const data = await res.json();
-      if (data.success) setCategories(prev => [...prev, data.category]);
-      pushToast({ type: "success", message: "✅ Category created!" });
+      if (data.success) {
+        setCategories(prev => [...prev, data.category]);
+        pushToast({ type: "success", message: "✅ Category created!" });
+        pushNotification({ title: "Category Added", message: `${name} category was added successfully.`, type: "success", icon: "🗂️" });
+      }
     } catch (err) {
       pushToast({ type: "danger", message: "Failed to create category" });
     }
-  }, [user, token, pushToast]);
-
-  // --- Notification Handlers ---
+  }, [user, token, pushToast, pushNotification]);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    if (token) {
+      fetch(`${API_URL}/notifications/mark-read`, { method: "PUT", headers: authHeaders(token) }).catch(console.error);
+    }
+  }, [token]);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    if (token) {
+      fetch(`${API_URL}/notifications`, { method: "DELETE", headers: authHeaders(token) }).catch(console.error);
+    }
+  }, [token]);
+
+  const deleteNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    if (token) {
+      fetch(`${API_URL}/notifications/${id}`, { method: "DELETE", headers: authHeaders(token) }).catch(console.error);
+    }
+  }, [token]);
+
+  // Badge unlock checking and celebration
+  const checkBadgeUnlocks = useCallback(() => {
+    if (!user) return;
+
+    const BADGES = [
+      { id:"first",    icon:"🌟", title:"First Step",      desc:"Added your first expense",              unlocked:e=>e.length>=1 },
+      { id:"five",     icon:"📊", title:"Data Tracker",    desc:"Tracked 5+ expenses",                   unlocked:e=>e.length>=5 },
+      { id:"ten",      icon:"🔥", title:"On Fire!",         desc:"Tracked 10+ expenses",                  unlocked:e=>e.length>=10 },
+      { id:"twenty",   icon:"💪", title:"Dedicated",       desc:"Tracked 20+ expenses",                  unlocked:e=>e.length>=20 },
+      { id:"saver",    icon:"💰", title:"Smart Saver",     desc:"Stayed under 60% of budget",            unlocked:(e,b)=>b>0&&e.reduce((s,x)=>s+x.amount,0)/b<0.6 },
+      { id:"variety",  icon:"🎨", title:"Well Rounded",    desc:"Used 4+ spending categories",           unlocked:e=>new Set(e.map(x=>x.category)).size>=4 },
+      { id:"scanner",  icon:"📸", title:"Tech Savvy",      desc:"Scanned a bill receipt",                unlocked:e=>e.some(x=>x.source==="scanner") },
+      { id:"voice",    icon:"🎙️", title:"Hands-Free",      desc:"Used voice to add expense",             unlocked:e=>e.some(x=>x.source==="voice") },
+      { id:"books",    icon:"📚", title:"Scholar",         desc:"Tracked a book/stationery expense",     unlocked:e=>e.some(x=>x.category==="books") },
+      { id:"health",   icon:"💊", title:"Health Aware",    desc:"Tracked a health expense",              unlocked:e=>e.some(x=>x.category==="health") },
+    ];
+
+    const newly = BADGES.filter(b => b.unlocked(expenses, budget) && !unlockedBadges.includes(b.id));
+    
+    if (newly.length > 0) {
+      const badge = newly[0];
+      setCelebrationReward(badge);
+      setUnlockedBadges(prev => {
+        const updated = [...prev, badge.id];
+        localStorage.setItem("sset_unlocked_badges", JSON.stringify(updated));
+        return updated;
+      });
+
+      pushNotification({
+        title: `🎉 Badge Unlocked!`,
+        message: `${badge.icon} ${badge.title} - ${badge.desc}`,
+        type: "success",
+        icon: badge.icon
+      });
+
+      playJingle();
+
+      // Auto-close celebration after 4 seconds
+      setTimeout(() => setCelebrationReward(null), 4000);
+    }
+  }, [expenses, budget, unlockedBadges, pushNotification, playJingle]);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const [currentMonthKey, setCurrentMonthKey] = useState(() => getLocalMonthKey());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const key = getLocalMonthKey();
+      setCurrentMonthKey(prev => (prev !== key ? key : prev));
+    }, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
-  const clearNotifications = useCallback(() => setNotifications([]), []);
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const monthlyExpenses = useMemo(() =>
+    expenses.filter(e => e.date && e.date.startsWith(currentMonthKey)),
+    [expenses, currentMonthKey]
+  );
+
+  const monthlySpent = useMemo(() =>
+    monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+    [monthlyExpenses]
+  );
+
+  const allTimeTotal = useMemo(() =>
+    expenses.reduce((sum, exp) => sum + exp.amount, 0),
+    [expenses]
+  );
+
+  const daysSinceFirstExpense = useMemo(() => {
+    if (expenses.length === 0) return 0;
+    const oldest = new Date(Math.min(...expenses.map(e => new Date(e.date))));
+    return Math.max(1, Math.ceil((Date.now() - oldest) / (1000 * 60 * 60 * 24)));
+  }, [expenses]);
+
+  const totalTrackingDays = daysSinceFirstExpense;
+
+  const budgetHistoryMap = useMemo(() => {
+    return budgetHistory.reduce((map, item) => {
+      const key = `${item.year}-${String(item.month).padStart(2, "0")}`;
+      map[key] = item.amount;
+      return map;
+    }, {});
+  }, [budgetHistory]);
+
+  const currentMonthBudget = budgetHistoryMap[currentMonthKey] ?? budget;
+
+  const previousMonthCarryOver = useMemo(() => {
+    if (currentMonthBudget <= 0) return 0;
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+    const lastMonthExpenses = expenses.filter(e => e.date && e.date.startsWith(lastMonthKey));
+    if (lastMonthExpenses.length === 0) return 0;
+    const lastMonthSpent = lastMonthExpenses.reduce((s, e) => s + e.amount, 0);
+    const lastMonthBudget = budgetHistoryMap[lastMonthKey] ?? 0;
+    return Math.max(0, lastMonthBudget - lastMonthSpent);
+  }, [expenses, currentMonthBudget, budgetHistoryMap]);
+
+  const effectiveMonthlyBudget = currentMonthBudget + previousMonthCarryOver;
+  const monthlyRemaining = effectiveMonthlyBudget - monthlySpent;
+
+  const monthlyBreakdown = useMemo(() => {
+    const map = {};
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const mo = e.date.slice(0, 7);
+      map[mo] = (map[mo] || 0) + e.amount;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([month, spent]) => {
+        const dateObj = new Date(month + "-01");
+        const label = dateObj.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const isCurrent = month === currentMonthKey;
+        const monthBudget = budgetHistoryMap[month] ?? 0;
+        const effectiveBudget = monthBudget + (isCurrent ? previousMonthCarryOver : 0);
+        const remaining = effectiveBudget - spent;
+        return { month, spent, budget: monthBudget, effectiveBudget, remaining, label, isCurrent };
+      });
+  }, [expenses, budget, previousMonthCarryOver, currentMonthKey, budgetHistoryMap]);
+
+  const allTimeBudgetVal = useMemo(() =>
+    monthlyBreakdown.reduce((sum, mo) => sum + mo.budget, 0),
+    [monthlyBreakdown]
+  );
+
+  // Side Effects (Fetching data) - with AbortController to prevent overlapping requests
+  useEffect(() => {
+    console.log("FETCH EFFECT TRIGGERED", { hasUser: !!user, hasToken: !!token });
+    if (!user || !token) {
+      setIsLoading(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+    const headers = authHeaders(token);
+    let isMounted = true;
+
+    const fetchAllData = async () => {
+      try {
+        // Expenses
+        const expRes = await fetchWithRetry(`${API_URL}/expenses`, { headers, signal: abortController.signal });
+        const expData = await expRes.json();
+        if (isMounted && expData.success) {
+          setExpenses((expData.expenses || []).map(e => ({
+            ...e, amount: Number(e.amount), date: e.date ? e.date.slice(0, 10) : e.date
+          })));
+        } else if (expData.message === 'Invalid token') logout();
+
+        // Categories
+        const catRes = await fetchWithRetry(`${API_URL}/categories`, { headers, signal: abortController.signal });
+        const catData = await catRes.json();
+        if (isMounted && catData.success) setCategories(catData.categories || []);
+
+        // Budget
+        const budRes = await fetchWithRetry(`${API_URL}/budget`, { headers, signal: abortController.signal });
+        const budData = await budRes.json();
+        if (isMounted && budData.success) {
+          setBudgetState(budData.budget || 0);
+          setDefaultBudget(budData.defaultBudget || 0);
+        }
+
+        // Budget History
+        const histRes = await fetchWithRetry(`${API_URL}/budget/history`, { headers, signal: abortController.signal });
+        const histData = await histRes.json();
+        if (isMounted && histData.success) setBudgetHistory(histData.history || []);
+
+        // Notifications
+        const notifRes = await fetchWithRetry(`${API_URL}/notifications`, { headers, signal: abortController.signal });
+        const notifData = await notifRes.json();
+        if (isMounted && notifData.success) setNotifications(notifData.notifications || []);
+
+        // Profile
+        const profRes = await fetchWithRetry(`${API_URL}/profile`, { headers, signal: abortController.signal });
+        const profData = await profRes.json();
+        if (isMounted && profData.success && profData.user) {
+          setUser(prev => ({ ...prev, ...profData.user }));
+        }
+
+        // Recurring
+        const recurRes = await fetchWithRetry(`${API_URL}/recurring`, { headers, signal: abortController.signal });
+        const recurData = await recurRes.json();
+        if (isMounted && recurData.success) {
+          setRecurring((recurData.recurring || []).map(r => ({
+            ...r,
+            amount: Number(r.amount),
+            isActive: r.isActive === true || r.isActive === 1
+          })));
+        } else if (recurData.message === 'Invalid token') logout();
+
+        // Goals
+        const goalRes = await fetchWithRetry(`${API_URL}/goals`, { headers, signal: abortController.signal });
+        const goalData = await goalRes.json();
+        if (isMounted && goalData.success) {
+          const mappedGoals = (goalData.goals || []).map(g => ({
+            ...g,
+            targetAmount: Number(g.targetAmount),
+            savedAmount: Number(g.savedAmount),
+            isCompleted: g.isCompleted === true || g.isCompleted === 1
+          }));
+          setGoals(mappedGoals);
+
+          const today = getLocalDateKey();
+          const lastGoalNotif = localStorage.getItem("last_notified_goals");
+          if (mappedGoals.length > 0 && lastGoalNotif !== today) {
+            const stagnant = mappedGoals.filter(g => (g.savedAmount || 0) === 0);
+            if (stagnant.length > 0) {
+              localStorage.setItem("last_notified_goals", today);
+              pushNotification({ title: "Saving Reminder 🎯", message: `You have ${stagnant.length} goals with no progress.`, type: "info", icon: "💰" });
+            }
+          }
+        } else if (goalData.message === 'Invalid token') logout();
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("Error fetching data:", err);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [token]);
+
+  // Auto-process subscriptions
+  useEffect(() => {
+    if (!recurring.length || !expenses.length || !token || !budget) return;
+    const today = getLocalDateKey();
+
+    recurring.forEach(item => {
+      if (item.isActive && item.nextDueDate <= today && !processingSubsRef.current.has(item.id)) {
+        const isPaid = item.lastPaidDate && item.lastPaidDate >= item.nextDueDate;
+        if (!isPaid) {
+          const totalSpentForMonth = expenses
+            .filter(e => e.date && e.date.startsWith(today.slice(0, 7)))
+            .reduce((s, e) => s + e.amount, 0);
+
+          if (totalSpentForMonth + Number(item.amount) <= effectiveMonthlyBudget) {
+            processingSubsRef.current.add(item.id);
+            const nextDue = calculateNextDate(item.nextDueDate, item.frequency);
+
+            addExpense({
+              amount: Number(item.amount),
+              category: item.category,
+              description: `Bill Paid: ${item.description || item.category}`,
+              date: today
+            }, {
+              title: "Auto-Payment Done",
+              message: `Paid PKR ${item.amount} for ${item.description || item.category}.`,
+              type: "success", icon: "✅"
+            });
+
+            fetch(`${API_URL}/recurring/${item.id}`, {
+              method: "PUT", headers: authHeaders(token),
+              body: JSON.stringify({ ...item, nextDueDate: nextDue, lastPaidDate: today })
+            }).then(() => {
+              fetch(`${API_URL}/recurring`, { headers: authHeaders(token) })
+                .then(res => res.json())
+                .then(d => { if (d.success) setRecurring(d.recurring); });
+            });
+          } else {
+            const lastAlert = localStorage.getItem(`budget_alert_${item.id}`);
+            if (lastAlert !== today) {
+              localStorage.setItem(`budget_alert_${item.id}`, today);
+              pushNotification({
+                title: "Low Budget: Payment Paused",
+                message: `Subscription for ${item.description || item.category} is pending.`,
+                type: "danger", icon: "⚠️"
+              });
+            }
+          }
+        }
+      }
+    });
+  }, [recurring, expenses, budget, token, addExpense, pushNotification, effectiveMonthlyBudget]);
+
+  // Check for badge unlocks whenever expenses or budget changes
+  useEffect(() => {
+    checkBadgeUnlocks();
+  }, [expenses, budget, checkBadgeUnlocks]);
 
   return (
     <AppContext.Provider value={{
-      theme, toggleTheme,
-      user, setUser, logout, updateProfile, localSignIn, login, register,
-      token,
+      theme, toggleTheme, accent, setAccent, lang, setLang,
+      user, setUser, logout, updateProfile, localSignIn, login, register, token,
       expenses, addExpense, deleteExpense, editExpense,
-      budget, setBudget,
-      lang, setLang,
+      monthlyExpenses, monthlySpent, allTimeTotal, daysSinceFirstExpense, totalTrackingDays,
+      previousMonthCarryOver, effectiveMonthlyBudget, monthlyRemaining, monthlyBreakdown, allTimeBudget: allTimeBudgetVal, budgetHistory,
+      budget, setBudget, defaultBudget, setDefaultBudget,
       categories, addCategory,
-      notifications, unreadCount, markAllRead, clearNotifications, pushNotification,
-      toasts, pushToast,
-      showOnboarding, setShowOnboarding,
+      notifications, unreadCount, markAllRead, clearNotifications, deleteNotification, pushNotification, requestNotificationPermission,
+      toasts, pushToast, showOnboarding, setShowOnboarding,
+      playTone, playSequence, triggerHaptic, playJingle, isLoading, dueSubscriptions, goals, setGoals, refreshGoals, recurring, setRecurring, refreshRecurring,
+      celebrationReward, setCelebrationReward, checkBadgeUnlocks
     }}>
       {children}
     </AppContext.Provider>

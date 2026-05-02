@@ -10,7 +10,8 @@ export const verifyToken = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = payload.id;            // <-- the front‑end stores the user id in the JWT
+    req.userId = payload.id;
+    console.log(`[AUTH] User ID: ${req.userId}`);
     next();
   } catch (err) {
     return res.status(403).json({ success: false, message: 'Invalid token' });
