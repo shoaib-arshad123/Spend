@@ -381,6 +381,96 @@ export function AppProvider({ children }) {
     pushToast({ type: "success", message: "Welcome back!" });
   }, [pushToast]);
 
+  // --- SECURITY & VERIFICATION ---
+  const sendOTP = useCallback(async (type, value) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/send-otp`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ type, value })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      pushToast({ type: "info", message: data.message });
+      return data;
+    } catch (err) {
+      pushToast({ type: "danger", message: err.message || "Failed to send OTP" });
+      throw err;
+    }
+  }, [token, pushToast]);
+
+  const verifyOTP = useCallback(async (type, otp) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ type, otp })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      pushToast({ type: "success", message: data.message });
+      // Refresh user data to get updated verification status
+      const meRes = await fetch(`${API_URL}/auth/me`, { headers: authHeaders(token) });
+      const meData = await meRes.json();
+      if (meData.success) setUser(meData.user);
+      return data;
+    } catch (err) {
+      pushToast({ type: "danger", message: err.message || "Verification failed" });
+      throw err;
+    }
+  }, [token, pushToast]);
+
+  const forgotPassword = useCallback(async (identity) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      pushToast({ type: "info", message: data.message });
+      return data;
+    } catch (err) {
+      pushToast({ type: "danger", message: err.message || "Request failed" });
+      throw err;
+    }
+  }, [pushToast]);
+
+  const resetPassword = useCallback(async (identity, otp, newPassword) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity, otp, newPassword })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      pushToast({ type: "success", message: data.message });
+      return data;
+    } catch (err) {
+      pushToast({ type: "danger", message: err.message || "Reset failed" });
+      throw err;
+    }
+  }, [pushToast]);
+
+  const changePassword = useCallback(async (oldPassword, newPassword) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      pushToast({ type: "success", message: data.message });
+      return data;
+    } catch (err) {
+      pushToast({ type: "danger", message: err.message || "Update failed" });
+      throw err;
+    }
+  }, [token, pushToast]);
+
   // --- Expense Handlers ---
   const addExpense = useCallback(async (exp, customNotification = null) => {
     if (!user) {
@@ -864,6 +954,7 @@ export function AppProvider({ children }) {
       categories, addCategory,
       notifications, unreadCount, markAllRead, clearNotifications, deleteNotification, pushNotification, requestNotificationPermission,
       toasts, pushToast, showOnboarding, setShowOnboarding,
+      sendOTP, verifyOTP, forgotPassword, resetPassword, changePassword,
       playTone, playSequence, triggerHaptic, playJingle, isLoading, dueSubscriptions, goals, setGoals, refreshGoals, recurring, setRecurring, refreshRecurring,
       celebrationReward, setCelebrationReward, checkBadgeUnlocks
     }}>

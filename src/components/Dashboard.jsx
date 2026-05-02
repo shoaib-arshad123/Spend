@@ -109,6 +109,8 @@ const CategoryTooltip = ({ active, payload }) => {
 };
 
 export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
+  const { expenses, categories, monthlySpent, monthlyExpenses, allTimeTotal, totalTrackingDays,
+    daysSinceFirstExpense, previousMonthCarryOver, effectiveMonthlyBudget, monthlyRemaining,
     monthlyBreakdown, lang, budget: appBudget, allTimeBudget, isLoading, dueSubscriptions, goals = [], recurring = [] } = useApp();
 
   const totalSpent = monthlySpent;

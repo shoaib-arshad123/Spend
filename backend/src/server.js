@@ -6,20 +6,20 @@ import dotenv from 'dotenv';
 // Import pool so the DB connection is established when the module loads
 import { pool } from './config/database.js';
 
-import authRoutes       from './routes/authRoutes.js';
-import expenseRoutes    from './routes/expenseRoutes.js';
-import budgetRoutes     from './routes/budgetRoutes.js';
-import profileRoutes    from './routes/profileRoutes.js';
-import categoryRoutes   from './routes/categoryRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
+import budgetRoutes from './routes/budgetRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
-import recurringRoutes   from './routes/recurringRoutes.js';
-import goalsRoutes       from './routes/goalsRoutes.js';
+import recurringRoutes from './routes/recurringRoutes.js';
+import goalsRoutes from './routes/goalsRoutes.js';
 
 import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 4444;
 
 // ─── GLOBAL MIDDLEWARE ────────────────────────────────────────────────────────
@@ -43,14 +43,14 @@ app.use((req, res, next) => {
 });
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes);
-app.use('/api/expenses',      expenseRoutes);
-app.use('/api/budget',        budgetRoutes);
-app.use('/api/profile',       profileRoutes);
-app.use('/api/categories',    categoryRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/budget', budgetRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/recurring',      recurringRoutes);
-app.use('/api/goals',          goalsRoutes);
+app.use('/api/recurring', recurringRoutes);
+app.use('/api/goals', goalsRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ success: true, message: 'Server is running' }));

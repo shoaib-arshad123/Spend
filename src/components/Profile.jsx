@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { formatPKR, classifyUser, SEED_EXPENSES } from "../utils/helpers";
 import { categoryAPI } from "../services/api.js";
-import { User as UserIcon, Edit3, Wallet, Settings, LogOut, DownloadCloud, Camera, Palette, DollarSign, CalendarDays, Zap, FileText, Trophy, Plus, Layout, ChevronLeft } from "lucide-react";
+import { User as UserIcon, Edit3, Wallet, Settings, LogOut, DownloadCloud, Camera, Palette, DollarSign, CalendarDays, Zap, FileText, Trophy, Plus, Layout, ChevronLeft, ShieldCheck, Mail, Phone, Lock } from "lucide-react";
 
 const AVATARS = ["🧑‍💻","👨‍🎓","👩‍🎓","🧑‍🎓","👦","👧","🧑","🧑‍💼","🧑‍🔬","🧑‍🎨","🧕","🧔"];
 const CAT_ICONS = { food:"🍔", transport:"🚌", books:"📚", health:"💊", entertainment:"🎮", clothing:"👕", other:"📦" };
@@ -30,14 +30,30 @@ function topCats(expenses) {
   return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,5);
 }
 
+const Field = ({ label, children }) => (
+  <div style={{ marginBottom: 15 }}>
+    <label style={P.fieldLabel}>{label}</label>
+    {children}
+  </div>
+);
+
 export default function Profile({ setActiveTab }) {
   const { user, updateProfile, logout, expenses, addExpense, budget, setBudget, theme, toggleTheme, accent, setAccent, categories, addCategory, allTimeTotal, allTimeBudget, monthlySpent, effectiveMonthlyBudget, monthlyRemaining } = useApp();
   const [section, setSection] = useState("overview"); // overview | edit | budget | danger | categories
   const [editForm, setEditForm] = useState({ name:user?.name||"", avatar:user?.avatar||"🧑‍💻", photo:user?.photo||null });
   const [budgetInput, setBudgetInput] = useState(String(budget||""));
   const [newCategory, setNewCategory] = useState({ name:"", icon:"📦" });
-  const [categoryError, setCategoryError] = useState("");
   const [categoryLoading, setCategoryLoading] = useState(false);
+  
+  // Security states
+  const { sendOTP, verifyOTP, changePassword } = useApp();
+  const [securityTab, setSecurityTab] = useState("menu"); // menu | verify | pass
+  const [verifyType, setVerifyType] = useState("email");
+  const [otpInput, setOtpInput] = useState("");
+  const [securityForm, setSecurityForm] = useState({ oldPass:"", newPass:"", confirmPass:"" });
+  const [securityError, setSecurityError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -102,6 +118,7 @@ export default function Profile({ setActiveTab }) {
     { key:"edit",     label:"Edit Profile",     icon: <Edit3 size={16} /> },
     { key:"budget",   label:"Budget Settings",  icon: <Wallet size={16} /> },
     { key:"categories", label:"Categories",     icon: <Palette size={16} /> },
+    { key:"security",   label:"Security",       icon: <ShieldCheck size={16} /> },
     { key:"appearance", label:"Appearance",     icon: <Layout size={16} /> },
     { key:"danger",   label:"Account",          icon: <Settings size={16} /> },
   ];
@@ -417,6 +434,179 @@ export default function Profile({ setActiveTab }) {
             </div>
           )}
 
+          {/* ── SECURITY ── */}
+          {section==="security" && (
+            <div style={P.card}>
+              <h3 style={P.cardTitle}>Security & Verification</h3>
+              
+              {securityTab === "menu" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                  <p style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:4 }}>Protect your account by verifying your details and keeping your password updated.</p>
+                  
+                  {/* Verification Section */}
+                  <div style={P.secBox}>
+                    <div style={P.secHeader}><ShieldCheck size={18} color="var(--accent)" /> <span>Identity Verification</span></div>
+                    <div style={P.secItem}>
+                      <div style={{ flex:1 }}>
+                        <p style={P.secLabel}>Email Address</p>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4 }}>
+                          <p style={P.secVal}>{user?.email}</p>
+                          <div style={{ ...P.statusBadge, background: user?.isEmailVerified ? "var(--green-bg)" : "var(--red-bg)", color: user?.isEmailVerified ? "var(--green)" : "var(--red)", border: `1px solid ${user?.isEmailVerified ? "var(--green)" : "var(--red)"}40` }}>
+                            {user?.isEmailVerified ? "VERIFIED" : "NOT VERIFIED"}
+                          </div>
+                        </div>
+                      </div>
+                      {!user?.isEmailVerified && (
+                        <button style={P.verifyBtn} onClick={() => { setVerifyType("email"); setSecurityTab("verify"); }}>Verify Email</button>
+                      )}
+                    </div>
+                    <div style={P.secItem}>
+                      <div style={{ flex:1 }}>
+                        <p style={P.secLabel}>Phone Number</p>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:4 }}>
+                          <p style={P.secVal}>{user?.phone || "No phone added"}</p>
+                          <div style={{ ...P.statusBadge, background: user?.isPhoneVerified ? "var(--green-bg)" : "var(--red-bg)", color: user?.isPhoneVerified ? "var(--green)" : "var(--red)", border: `1px solid ${user?.isPhoneVerified ? "var(--green)" : "var(--red)"}40` }}>
+                            {user?.isPhoneVerified ? "VERIFIED" : "NOT VERIFIED"}
+                          </div>
+                        </div>
+                      </div>
+                      {!user?.isPhoneVerified && (
+                        <button style={P.verifyBtn} onClick={() => { setVerifyType("phone"); setSecurityTab("verify"); }}>
+                          {user?.phone ? "Verify Phone Number" : "Add & Verify"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Password Section */}
+                  <div style={P.secBox}>
+                    <div style={P.secHeader}><Lock size={18} color="var(--accent)" /> <span>Account Access</span></div>
+                    <div style={P.secItem}>
+                      <div style={{ flex:1 }}>
+                        <p style={P.secLabel}>Password</p>
+                        <p style={P.secVal}>••••••••••••</p>
+                      </div>
+                      <button style={P.secActionBtn} onClick={() => setSecurityTab("pass")}>Change Password</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {securityTab === "verify" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <button style={P.backSmall} onClick={() => { setSecurityTab("menu"); setOtpSent(false); setOtpInput(""); setSecurityError(""); }}><ChevronLeft size={16} /></button>
+                    <div>
+                      <h4 style={{ margin:0, fontSize:15 }}>Identity Verification</h4>
+                      <p style={{ margin:0, fontSize:11, color:"var(--accent)", fontWeight:600 }}>{otpSent ? "Step 2: Confirm OTP" : "Step 1: Request Code"}</p>
+                    </div>
+                  </div>
+
+                  {!otpSent ? (
+                    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                      <p style={{ fontSize:13, color:"var(--text-secondary)" }}>To verify your **{verifyType}**, we will send a 6-digit secure code to your device.</p>
+                      {verifyType === 'phone' && (
+                        <Field label="Enter Phone Number">
+                          <input 
+                            placeholder="+92 300 1234567" 
+                            style={P.input} 
+                            value={editForm.phone || user?.phone || ""} 
+                            onChange={e => setEditForm({...editForm, phone: e.target.value})} 
+                          />
+                        </Field>
+                      )}
+                      {verifyType === 'email' && (
+                        <div style={{ padding:12, background:"var(--bg-elevated)", borderRadius:8, border:"1px solid var(--border)" }}>
+                          <p style={{ margin:0, fontSize:11, color:"var(--text-secondary)" }}>Email to verify:</p>
+                          <p style={{ margin:"4px 0 0", fontSize:14, fontWeight:600 }}>{user?.email}</p>
+                        </div>
+                      )}
+                      
+                      {securityError && <p style={{ color:"var(--red)", fontSize:12, margin:0 }}>⚠️ {securityError}</p>}
+                      
+                      <button style={P.saveBtn} onClick={async () => {
+                        setSecurityError("");
+                        setIsVerifying(true);
+                        try {
+                          await sendOTP(verifyType, verifyType === 'phone' ? (editForm.phone || user?.phone) : user.email);
+                          setOtpSent(true);
+                        } catch(err) { setSecurityError(err.message); }
+                        finally { setIsVerifying(false); }
+                      }}>{isVerifying ? "Sending Code..." : "Send Verification Code"}</button>
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                      <div style={{ textAlign:"center", padding:"10px 0" }}>
+                        <p style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:14 }}>A 6-digit code has been sent to your {verifyType}. Please enter it below:</p>
+                        <input 
+                          placeholder="0 0 0 0 0 0" 
+                          maxLength={6} 
+                          autoFocus
+                          style={{ ...P.input, textAlign:"center", fontSize:26, letterSpacing:6, fontWeight:800, width:"100%", maxWidth:240, margin:"0 auto" }} 
+                          value={otpInput} 
+                          onChange={e => setOtpInput(e.target.value.replace(/\D/g,''))} 
+                        />
+                      </div>
+                      
+                      {securityError && <p style={{ color:"var(--red)", fontSize:12, margin:0, textAlign:"center" }}>⚠️ {securityError}</p>}
+                      
+                      <button style={P.saveBtn} onClick={async () => {
+                        setSecurityError("");
+                        setIsVerifying(true);
+                        try {
+                          await verifyOTP(verifyType, otpInput);
+                          setSecurityTab("menu");
+                          setOtpSent(false);
+                          setOtpInput("");
+                        } catch(err) { setSecurityError(err.message); }
+                        finally { setIsVerifying(false); }
+                      }}>{isVerifying ? "Verifying..." : "Confirm & Verify"}</button>
+                      
+                      <div style={{ textAlign:"center" }}>
+                        <button style={{ background:"none", border:"none", color:"var(--text-secondary)", fontSize:12, cursor:"pointer", textDecoration:"underline" }} onClick={() => setOtpSent(false)}>Edit {verifyType} or Resend</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {securityTab === "pass" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <button style={P.backSmall} onClick={() => { setSecurityTab("menu"); setSecurityError(""); }}><ChevronLeft size={16} /></button>
+                    <h4 style={{ margin:0, fontSize:15 }}>Change Password</h4>
+                  </div>
+                  
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <Field label="Current Password">
+                      <input type="password" style={P.input} value={securityForm.oldPass} onChange={e => setSecurityForm({...securityForm, oldPass:e.target.value})} />
+                    </Field>
+                    <Field label="New Password">
+                      <input type="password" style={P.input} value={securityForm.newPass} onChange={e => setSecurityForm({...securityForm, newPass:e.target.value})} />
+                    </Field>
+                    <Field label="Confirm New Password">
+                      <input type="password" style={P.input} value={securityForm.confirmPass} onChange={e => setSecurityForm({...securityForm, confirmPass:e.target.value})} />
+                    </Field>
+                    
+                    {securityError && <p style={{ color:"var(--red)", fontSize:12, margin:0 }}>⚠️ {securityError}</p>}
+                    <AnimatePresence>{saved && <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={P.savedMsg}>✅ Password updated!</motion.div>}</AnimatePresence>
+
+                    <button style={P.saveBtn} onClick={async () => {
+                      if (securityForm.newPass !== securityForm.confirmPass) return setSecurityError("Passwords do not match");
+                      if (securityForm.newPass.length < 6) return setSecurityError("New password too short");
+                      setIsVerifying(true);
+                      try {
+                        await changePassword(securityForm.oldPass, securityForm.newPass);
+                        setSaved(true);
+                        setTimeout(() => { setSaved(false); setSecurityTab("menu"); }, 1500);
+                      } catch(err) { setSecurityError(err.message); }
+                      finally { setIsVerifying(false); }
+                    }}>{isVerifying ? "Updating..." : "Update Password"}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {/* ── APPEARANCE ── */}
           {section==="appearance" && (
             <div style={P.card}>
@@ -514,4 +704,16 @@ const P = {
   backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
   dangerBtn2:   { display:"flex", alignItems:"center", justifyContent:"center", background:"var(--blue-bg)", border:"1px solid var(--blue)", color:"var(--blue)", padding:"12px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"var(--font)", transition:"background 0.2s" },
   emojiBtn:     { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"10px", fontSize:20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" },
+  
+  // Security styles
+  secBox:       { background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:12, padding:16, display:"flex", flexDirection:"column", gap:12 },
+  secHeader:    { display:"flex", alignItems:"center", gap:8, fontSize:13, fontWeight:700, color:"var(--text-primary)", borderBottom:"1px solid var(--border-light)", paddingBottom:10 },
+  secItem:      { display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 },
+  secLabel:     { margin:0, fontSize:11, fontWeight:600, color:"var(--text-muted)", textTransform:"uppercase" },
+  secVal:       { margin:0, fontSize:13, color:"var(--text-secondary)" },
+  verifyBtn:    { background:"var(--accent)", color:"#111", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer" },
+  verifiedBadge:{ background:"var(--green-bg)", color:"var(--green)", border:"1px solid var(--green)", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700 },
+  secActionBtn: { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" },
+  backSmall:    { background:"var(--bg-elevated)", border:"1px solid var(--border)", color:"var(--text-secondary)", width:28, height:28, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
+  statusBadge:  { fontSize:9, fontWeight:800, padding:"2px 6px", borderRadius:4, letterSpacing:"0.02em" },
 };

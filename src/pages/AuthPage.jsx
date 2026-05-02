@@ -58,7 +58,7 @@ export function RegisterPage({ onBack, onSwitchToLogin }) {
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-export function LoginPage({ onBack, onSwitchToRegister }) {
+export function LoginPage({ onBack, onSwitchToRegister, onSwitchToForgot }) {
   const { login } = useApp();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -93,9 +93,100 @@ export function LoginPage({ onBack, onSwitchToRegister }) {
         <Input type="password" placeholder="Your password" value={form.password} onChange={v => set("password", v)} onEnter={submit} />
       </Field>
       {error && <ErrorMsg msg={error} />}
-      <motion.button style={{ ...A.submitBtn, opacity: loading ? 0.7 : 1 }} onClick={submit} disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: 0.97 }}>
+      <motion.button style={{ ...A.submitBtn, opacity: loading ? 0.7 : 1 }} onClick={submit} disabled={loading} whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.97 }}>
         {loading ? "Signing in..." : "Sign In →"}
       </motion.button>
+      <div style={{ textAlign: "center", marginTop: 14 }}>
+        <button style={A.forgotLink} onClick={onSwitchToForgot}>Forgot password?</button>
+      </div>
+    </AuthLayout>
+  );
+}
+
+// ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+export function ForgotPage({ onBack, onSwitchToLogin }) {
+  const { forgotPassword, resetPassword } = useApp();
+  const [step, setStep] = useState(1); // 1: identity, 2: otp, 3: new pass
+  const [identity, setIdentity] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const requestOtp = async () => {
+    if (!identity) return setError("Please enter your email or phone.");
+    setError(""); setLoading(true);
+    try {
+      await forgotPassword(identity.trim());
+      setStep(2);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const confirmOtp = () => {
+    if (otp.length < 6) return setError("Please enter a valid 6-digit code.");
+    setError("");
+    setStep(3);
+  };
+
+  const doReset = async () => {
+    if (!newPass || newPass.length < 6) return setError("Password must be at least 6 characters.");
+    setError(""); setLoading(true);
+    try {
+      await resetPassword(identity.trim(), otp, newPass);
+      onSwitchToLogin();
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <AuthLayout
+      title="Reset Password"
+      subtitle={
+        step === 1 ? "Verify your identity to recover account" : 
+        step === 2 ? "Enter the 6-digit OTP sent to your email" : 
+        "Create a strong new password for your account"
+      }
+      onBack={step === 1 ? onBack : () => setStep(step - 1)}
+      footer={<>Remember your password? <button style={A.switchBtn} onClick={onSwitchToLogin}>Sign In →</button></>}
+    >
+      {step === 1 && (
+        <>
+          <Field label="Email Address or Phone">
+            <Input placeholder="you@student.edu.pk or +92..." value={identity} onChange={setIdentity} onEnter={requestOtp} />
+          </Field>
+          {error && <ErrorMsg msg={error} />}
+          <motion.button style={A.submitBtn} onClick={requestOtp} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+            {loading ? "Checking..." : "Send Verification Code"}
+          </motion.button>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <Field label="Verification Code (OTP)">
+            <Input placeholder="6-digit code" value={otp} onChange={setOtp} onEnter={confirmOtp} />
+          </Field>
+          {error && <ErrorMsg msg={error} />}
+          <motion.button style={A.submitBtn} onClick={confirmOtp} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+            Confirm Code →
+          </motion.button>
+          <button style={{ ...A.switchBtn, marginTop:10, width:"100%" }} onClick={requestOtp}>Resend Code</button>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <Field label="Set New Password">
+            <Input type="password" placeholder="Minimum 6 characters" value={newPass} onChange={setNewPass} onEnter={doReset} />
+          </Field>
+          <PasswordStrength pwd={newPass} />
+          {error && <ErrorMsg msg={error} />}
+          <motion.button style={A.submitBtn} onClick={doReset} disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+            {loading ? "Updating..." : "Reset Password & Sign In"}
+          </motion.button>
+        </>
+      )}
     </AuthLayout>
   );
 }
@@ -195,6 +286,7 @@ const A = {
   backBtn: { flex: 1, background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "13px", borderRadius: 10, cursor: "pointer", fontSize: 14, fontFamily: "var(--font)" },
   footerText: { textAlign: "center", fontSize: 13, color: "var(--text-muted)", margin: "18px 0 0" },
   switchBtn: { background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "var(--font)" },
+  forgotLink: { background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 12, fontFamily: "var(--font)", textDecoration: "underline" },
   demoBtn: { background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: 12, fontFamily: "var(--font)", textDecoration: "underline" },
   featureHints: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" },
   hint: { background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)", padding: "5px 12px", borderRadius: 20, fontSize: 12 },

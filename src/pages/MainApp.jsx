@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { translations } from "../i18n/translations";
 import Dashboard      from "../components/Dashboard";
@@ -54,12 +55,33 @@ const NAV = [
   { key:"profile",    icon: <UserIcon size={20} />, label:"Profile" },
 ];
 
-export default function MainApp() {
+export default function MainApp({ tab = "dashboard" }) {
+  const navigate = useNavigate();
   const { user, lang, setLang, expenses, monthlyExpenses, budget, setBudget, addExpense, deleteExpense, unreadCount, theme, toggleTheme, logout, celebrationReward, setCelebrationReward } = useApp();
-  const [activeTab,   setActiveTab]   = useState("dashboard");
+  
   const [showNotif,   setShowNotif]   = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Map route keys to human readable paths if needed, 
+  // but we'll use a direct mapping for simplicity
+  const activeTab = tab; 
+
+  const handleTabChange = (key) => {
+    const paths = {
+      dashboard: "/dashboard",
+      analytics: "/analytics",
+      addExpense: "/add",
+      history: "/history",
+      recurring: "/recurring",
+      goals: "/goals",
+      advice: "/advice",
+      rewards: "/rewards",
+      profile: "/profile"
+    };
+    navigate(paths[key] || "/dashboard");
+    setSidebarOpen(false);
+  };
 
   const t          = translations[lang];
   const totalSpent = expenses.reduce((s,e) => s+e.amount, 0);
@@ -69,7 +91,7 @@ export default function MainApp() {
   const active     = NAV.find(n => n.key === activeTab);
 
   const renderPage = () => {
-    const p = { t, lang, expenses, budget, setBudget, setActiveTab };
+    const p = { t, lang, expenses, budget, setBudget, setActiveTab: handleTabChange };
     switch(activeTab) {
       case "dashboard":  return <Dashboard {...p} />;
       case "analytics":  return <Analytics {...p} />;
@@ -86,14 +108,76 @@ export default function MainApp() {
 
   return (
     <div style={ms.root}>
-      {/* Sidebar removed as requested - using top bar and bottom nav instead */}
+      {/* Sidebar Overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              style={ms.overlay} onClick={() => setSidebarOpen(false)} 
+            />
+            <motion.div 
+              initial={{ x:-250 }} animate={{ x:0 }} exit={{ x:-250 }}
+              transition={{ type:"spring", damping:25, stiffness:200 }}
+              style={ms.sidebar}
+            >
+              <div style={ms.sidebarTop}>
+                <div style={ms.sbLogo}>
+                  <div style={ms.sbLogoIcon}>💰</div>
+                  <span style={ms.sbBrand}>SpendSmart</span>
+                </div>
+                <button style={ms.sbClose} onClick={() => setSidebarOpen(false)}><X size={20} /></button>
+              </div>
+
+              <div style={ms.sbUser}>
+                <div style={{ width:40, height:40, borderRadius:"50%", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, overflow:"hidden" }}>
+                  {user?.photo ? <img src={user.photo} alt="P" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : (user?.avatar||"🧑‍💻")}
+                </div>
+                <div style={{ flex:1 }}>
+                  <p style={ms.sbUserName}>{user?.name}</p>
+                  <p style={ms.sbUserSub}>{user?.email}</p>
+                </div>
+              </div>
+
+              <div style={ms.sbNav}>
+                <p style={{ fontSize:10, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", margin:"10px 12px 6px" }}>Main Menu</p>
+                {NAV.map(n => (
+                  <button 
+                    key={n.key} 
+                    onClick={() => handleTabChange(n.key)}
+                    style={{ ...ms.sbNavItem, ...(activeTab === n.key ? ms.sbNavActive : {}) }}
+                  >
+                    <span style={{ ...ms.sbNavIcon, background: activeTab===n.key ? "var(--accent)" : "var(--bg-input)", color: activeTab===n.key ? "#111" : "var(--text-muted)" }}>{n.icon}</span>
+                    <span>{n.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={ms.sbBottom}>
+                <button style={ms.sbAction} onClick={() => { logout(); setSidebarOpen(false); }}>
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── MAIN ── */}
       <div style={ms.main}>
         {/* Top bar */}
         <header style={ms.topBar}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ ...ms.topBrand, cursor: "pointer", marginLeft: 0 }} onClick={() => setActiveTab("dashboard")}>
+            <motion.button 
+              style={ms.iconBtn} 
+              onClick={() => setSidebarOpen(true)}
+              whileHover={{ scale:1.1, background:"var(--accent-subtle)" }}
+              whileTap={{ scale:0.9 }}
+            >
+              <Menu size={20} />
+            </motion.button>
+            <div style={{ ...ms.topBrand, cursor: "pointer", marginLeft: 0 }} onClick={() => handleTabChange("dashboard")}>
               <img src="/logo.png" alt="SpendSmart" style={{ width:24, height:24, borderRadius:5, objectFit:"cover" }} />
               <span style={{ fontSize:15, fontWeight:800, color:"var(--accent)" }}>SpendSmart</span>
             </div>
@@ -103,7 +187,7 @@ export default function MainApp() {
             {/* Rewards shortcut */}
             <motion.button 
               style={ms.iconBtn} 
-              onClick={() => setActiveTab("rewards")} 
+              onClick={() => handleTabChange("rewards")} 
               title="Your Rewards"
               whileHover={{ scale: 1.1, background: "var(--accent-subtle)" }} 
               whileTap={{ scale: 0.9 }}
@@ -122,7 +206,7 @@ export default function MainApp() {
               </AnimatePresence>
             </div>
             {/* Avatar */}
-            <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => setActiveTab("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
               {user?.photo ? (
                 <img src={user.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               ) : (
@@ -159,7 +243,7 @@ export default function MainApp() {
           >
             <span>⚠️</span>
             <span style={{ flex:1, fontSize:13 }}>No budget set! Go to your Profile to set your monthly budget.</span>
-            <motion.button style={ms.budgetBannerBtn} onClick={() => setActiveTab("profile")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Set Budget →</motion.button>
+            <motion.button style={ms.budgetBannerBtn} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Set Budget →</motion.button>
           </motion.div>
         )}
 
@@ -187,7 +271,7 @@ export default function MainApp() {
                 <div key={n.key} style={ms.bottomFabWrap}>
                   <motion.button
                     style={ms.bottomFab}
-                    onClick={() => setActiveTab(n.key)}
+                    onClick={() => handleTabChange(n.key)}
                     whileHover={{ scale: 1.15, boxShadow: "0 6px 16px rgba(245,158,11,0.6)" }}
                     whileTap={{ scale: 0.9 }}
                   >
@@ -199,7 +283,7 @@ export default function MainApp() {
             return (
               <motion.button key={n.key}
                 style={{ ...ms.bottomItem, ...(activeTab === n.key ? ms.bottomActive : {}) }}
-                onClick={() => setActiveTab(n.key)}
+                onClick={() => handleTabChange(n.key)}
                 whileHover={{ scale: 1.1, color: "var(--accent)" }}
                 whileTap={{ scale: 0.95 }}
               >
