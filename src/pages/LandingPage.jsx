@@ -15,7 +15,7 @@ const FEATURES = [
   { icon: <BellRing />, color:"#ec4899", title:"Smart Alerts",        desc:"Get warned before you overspend. Real-time budget alerts keep you informed before it's too late." },
   { icon: <TrendingUp />, color:"#f97316", title:"Deep Analytics",      desc:"Weekly, monthly, and yearly trend charts with predictive forecasting to plan your budget smarter." },
   { icon: <Trophy />, color:"#f5b800", title:"Reward System",       desc:"Earn badges, maintain streaks, and build healthy financial habits through gamified tracking." },
-  { icon: <Languages />, color:"#10b981", title:"Bilingual Support",   desc:"Full Urdu and English support. Switch languages anytime — designed for Pakistani students." },
+
   { icon: <Trophy />, color:"#f43f5e", title:"Financial Goals",    desc:"Set saving goals for new gadgets or travel. Track progress automatically as you save." },
   { icon: <TrendingUp />, color:"#0ea5e9", title:"Subscriptions",      desc:"Never pay for an unused service again. Manage all your recurring bills and subscriptions in one place." },
 ];
@@ -30,7 +30,7 @@ const STATS = [
 const TESTIMONIALS = [
   { name:"Hira Baig",     uni:"NUST Islamabad",       avatar:"👩‍🎓", text:"SpendSmart changed how I manage my pocket money. I saved PKR 8,000 in my first month!", stars:5 },
   { name:"Ahmed Raza",    uni:"FAST Lahore",           avatar:"👨‍💻", text:"The bill scanner is incredible. I just take photos of receipts and it does everything.", stars:5 },
-  { name:"Fatima Malik",  uni:"UET Peshawar",          avatar:"👩‍🔬", text:"Urdu support made it so accessible. My whole family uses it now!", stars:5 },
+  { name:"Fatima Malik",  uni:"UET Peshawar",          avatar:"👩‍🔬", text:"The detailed charts help me keep track of every single rupee. Very useful!", stars:5 },
   { name:"Zain ul Abdin", uni:"COMSATS Islamabad",     avatar:"🧑‍💻", text:"The AI advice feature literally told me I was overspending on chai. Very accurate 😂", stars:4 },
 ];
 
@@ -245,7 +245,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}>
               <div style={L.heroBadge}>
                 <span style={L.heroBadgeDot} />
-                🎓 Built for Pakistani Students · Track in Urdu or English
+                🎓 Built for Pakistani Students · Track your expenses effortlessly
               </div>
             </motion.div>
 
@@ -452,7 +452,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               </div>
               <p style={L.footerDesc}>
                 Empowering students with AI-driven financial clarity. Built for the next generation of Pakistani savers. 
-                Experience the best expense tracking with smart insights and bilingual support.
+                Experience the best expense tracking with smart insights and a premium interface.
               </p>
             </div>
             <div style={L.footerLinkCol}>

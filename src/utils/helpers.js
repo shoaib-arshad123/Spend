@@ -44,33 +44,21 @@ export const getSmartAdvice = (expenses, lang) => {
   const top = sorted[0];
   const advice = {
     en: [],
-    ur: [],
   };
   if (top) {
     advice.en.push(`You spend the most on ${top[0]} (PKR ${top[1].toLocaleString()}). Consider reducing it.`);
-    advice.ur.push(`آپ سب سے زیادہ ${top[0]} پر خرچ کرتے ہیں۔ اسے کم کرنے کی کوشش کریں۔`);
   }
   const foodTotal = catTotals["Food & Dining"] || catTotals.food || 0;
   const entTotal = catTotals["Entertainment"] || catTotals.entertainment || 0;
   const transTotal = catTotals["Transportation"] || catTotals.transport || 0;
 
-  if (foodTotal > 5000) {
-    advice.en.push("Try cooking at home to save on food expenses.");
-    advice.ur.push("کھانے کے اخراجات بچانے کے لیے گھر پر کھانا پکانے کی کوشش کریں۔");
-  }
-  if (entTotal > 3000) {
-    advice.en.push("Entertainment spending is high. Try free alternatives.");
-    advice.ur.push("تفریحی اخراجات زیادہ ہیں۔ مفت متبادل آزمائیں۔");
-  }
   if (transTotal > 4000) {
     advice.en.push("Your transport cost increased this week. Try carpooling.");
-    advice.ur.push("آپ کی ٹرانسپورٹ لاگت اس ہفتے بڑھ گئی۔ کارپولنگ آزمائیں۔");
   }
-  if (!advice[lang].length) {
+  if (!advice.en.length) {
     advice.en.push("Great job! Keep tracking your expenses daily.");
-    advice.ur.push("شاباش! روزانہ اپنے اخراجات ٹریک کرتے رہیں۔");
   }
-  return advice[lang];
+  return advice.en;
 };
 
 export const generateId = () =>

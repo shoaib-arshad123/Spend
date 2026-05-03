@@ -5,29 +5,16 @@ import { formatPKR, getPredictionDays, getSmartAdvice } from "../utils/helpers";
 import { getCategoryColor, getCategoryIcon } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
 
-const SAVING_TIPS = {
-  en: [
-    { icon:"🍱", tip:"Pack lunch from home. Canteen costs 3-4x more per meal." },
-    { icon:"🚶", tip:"Walk short distances instead of taking rickshaws — saves daily." },
-    { icon:"📚", tip:"Borrow books from library instead of buying every semester." },
-    { icon:"📵", tip:"Reduce mobile top-ups. Use Wi-Fi where possible." },
-    { icon:"☕", tip:"Limit café visits. Make tea at home and save PKR 200+ daily." },
-    { icon:"🛒", tip:"Buy groceries weekly in bulk — cheaper than daily shopping." },
-  ],
-  ur: [
-    { icon:"🍱", tip:"گھر سے کھانا لے جائیں۔ کینٹین میں 3-4 گنا زیادہ خرچ ہوتا ہے۔" },
-    { icon:"🚶", tip:"قریبی فاصلے پیدل طے کریں — روزانہ بچت ہوگی۔" },
-    { icon:"📚", tip:"کتابیں لائبریری سے لیں — ہر سمسٹر خریدنے کی ضرورت نہیں۔" },
-    { icon:"📵", tip:"موبائل ریچارج کم کریں۔ جہاں ممکن ہو وائی فائی استعمال کریں۔" },
-    { icon:"☕", tip:"چائے گھر بنائیں — روزانہ PKR 200+ کی بچت ہوگی۔" },
-    { icon:"🛒", tip:"ہفتہ وار خریداری کریں — روزانہ کی نسبت سستی پڑتی ہے۔" },
-  ],
-};
+const SAVING_TIPS = [
+  { icon:"🍱", tip:"Pack lunch from home. Canteen costs 3-4x more per meal." },
+  { icon:"🚶", tip:"Walk short distances instead of taking rickshaws — saves daily." },
+  { icon:"📚", tip:"Borrow books from library instead of buying every semester." },
+  { icon:"📵", tip:"Reduce mobile top-ups. Use Wi-Fi where possible." },
+  { icon:"☕", tip:"Limit café visits. Make tea at home and save PKR 200+ daily." },
+  { icon:"🛒", tip:"Buy groceries weekly in bulk — cheaper than daily shopping." },
+];
 
-const AI_LABELS = {
-  en:{ title:"🧠 AI Spending Analysis", empty:"Add more expenses so the AI can analyze your patterns.", insight:"Key Insight" },
-  ur:{ title:"🧠 AI خرچ تجزیہ", empty:"AI تجزیہ کے لیے مزید اخراجات شامل کریں۔", insight:"اہم بات" },
-};
+const AI_LABELS = { title:"🧠 AI Spending Analysis", empty:"Add more expenses so the AI can analyze your patterns.", insight:"Key Insight" };
 
 export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab }) {
   const { pushNotification } = useApp();
@@ -36,8 +23,8 @@ export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab })
   const predDays   = getPredictionDays(expenses, budget);
   const totalSpent = expenses.reduce((s,e)=>s+e.amount,0);
   const remaining  = budget - totalSpent;
-  const tips       = SAVING_TIPS[lang] || SAVING_TIPS.en;
-  const ai         = AI_LABELS[lang] || AI_LABELS.en;
+  const tips       = SAVING_TIPS;
+  const ai         = AI_LABELS;
 
   const catMap = {};
   expenses.forEach(e=>{ catMap[e.category]=(catMap[e.category]||0)+e.amount; });
@@ -88,7 +75,7 @@ export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab })
           <span style={{ fontSize:24 }}>{predDays<5?"🚨":predDays<10?"⚡":"✅"}</span>
           <div style={{ flex:1 }}>
             <p style={{ margin:0, fontWeight:700, fontSize:14, color:"var(--text-primary)" }}>
-              {predDays<1 ? (lang==="ur"?"بجٹ ختم ہو گیا!" : "Budget exhausted!") : lang==="ur" ? `بجٹ تقریباً ${predDays} دن اور چلے گا` : `Budget will last approximately ${predDays} more days`}
+              {predDays < 1 ? "Budget exhausted!" : `Budget will last approximately ${predDays} more days`}
             </p>
             <p style={{ margin:0, fontSize:12, color:"var(--text-muted)" }}>{formatPKR(Math.max(remaining,0))} remaining · {formatPKR(budget)} total budget</p>
           </div>
@@ -164,7 +151,7 @@ export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab })
 
       {/* Saving tips */}
       <motion.div style={SA.card} whileHover={{ y: -4, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }} transition={{ type: "spring", stiffness: 300 }}>
-        <h3 style={SA.cardTitle}>💡 {lang==="ur"?"بچت کے مشورے":"Saving Tips for Students"}</h3>
+        <h3 style={SA.cardTitle}>💡 Saving Tips for Students</h3>
         <div style={SA.tipsGrid}>
           {tips.map((tip, i) => (
             <motion.div

@@ -71,7 +71,7 @@ export default function MainApp({ tab = "dashboard" }) {
     setShowMoreMenu(false);
   };
 
-  const t          = translations[lang];
+  const t          = translations;
   const totalSpent = expenses.reduce((s,e) => s+e.amount, 0);
   const userType   = classifyUser(totalSpent, budget);
   const pct        = budget > 0 ? Math.round((totalSpent/budget)*100) : 0;
@@ -157,16 +157,7 @@ export default function MainApp({ tab = "dashboard" }) {
                   {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                   <span>{theme === "dark" ? "Light" : "Dark"}</span>
                 </motion.button>
-                <motion.button 
-                  className="nav-hover" 
-                  style={ms.sbAction}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Globe size={18} />
-                  <span>Language</span>
-                </motion.button>
+
                 <motion.button 
                   className="nav-hover" 
                   style={{ ...ms.sbAction, color:"var(--red)", borderColor:"rgba(239,68,68,0.2)" }} 

@@ -224,31 +224,34 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         </motion.div>
       )}
 
-      {/* ── All-Time Overview Banner ── */}
-      <TiltCard style={D.allTimeBanner}>
-        <div style={D.allTimeHeader}>
-          <span style={{ fontSize:18 }}>📊</span>
-          <span style={{ fontSize:14, fontWeight:700, color:"var(--text-primary)" }}>All-Time Overview</span>
+      {/* ── All-Time Overview Grid ── */}
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingLeft: 4 }}>
+          <div style={{ width: 4, height: 16, background: "var(--accent)", borderRadius: 2 }} />
+          <h3 style={{ ...D.chartTitle, margin: 0, fontSize: 13, textTransform: "uppercase", letterSpacing: 1 }}>All-Time Analytics</h3>
         </div>
-        <div style={D.allTimeGrid}>
+        <div style={D.statsRow}>
           {[
-            { icon:"💰", label:"All-Time Spent", value:formatPKR(allTimeTotal), color:"var(--red)" },
-            { icon:"📅", label:"Days Tracked", value:`${totalTrackingDays}`, color:"var(--blue)" },
-            { icon:"⏳", label:"Days Active", value:`${daysSinceFirstExpense}`, color:"var(--purple)" },
-            { icon:"📝", label:"Total Transactions", value:`${expenses.length}`, color:"var(--accent)" },
-            { icon:"📈", label:"All-Time Budget", value:formatPKR(allTimeBudget), color:"var(--cyan)" },
+            { icon: "💰", label: "All-Time Spent", value: formatPKR(allTimeTotal), color: "var(--red)", sub: "Total Volume" },
+            { icon: "📅", label: "Days Tracked", value: `${totalTrackingDays}`, color: "var(--blue)", sub: "Since Start" },
+            { icon: "📝", label: "Transactions", value: `${expenses.length}`, color: "var(--accent)", sub: "Total Logs" },
+            { icon: "📈", label: "Total Budget", value: formatPKR(allTimeBudget), color: "var(--green)", sub: "Planned" },
+            { icon: "📊", label: "Avg / Month", value: formatPKR(Math.round(allTimeTotal / Math.max(1, Math.ceil(totalTrackingDays/30)))), color: "var(--purple)", sub: "Spending" },
           ].map((s, i) => (
-            <motion.div key={s.label} style={D.allTimeStat} whileHover={{ y:-2, boxShadow:"var(--shadow-md)" }} transition={{ duration:0.15 }}>
-              <span style={{ fontSize:16 }}>{s.icon}</span>
-              <p style={{ margin:"4px 0 2px", fontSize:14, fontWeight:800, color:s.color, letterSpacing:"-0.3px" }}>{s.value}</p>
-              <p style={{ margin:0, fontSize:10, color:"var(--text-muted)" }}>{s.label}</p>
-            </motion.div>
+            <TiltCard key={s.label} style={D.statCard} delay={i * 0.05}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <span style={{ fontSize: 20 }}>{s.icon}</span>
+                <span style={{ fontSize: 9, color: "var(--text-muted)", background: "var(--bg-input)", padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>{s.sub}</span>
+              </div>
+              <p style={{ ...D.statValue, color: s.color, fontSize: 16, marginTop: 8 }}>{s.value}</p>
+              <p style={D.statLabel}>{s.label}</p>
+            </TiltCard>
           ))}
         </div>
-      </TiltCard>
+      </div>
 
       {/* ── Monthly Budget card ── */}
-      <TiltCard style={D.budgetCard} delay={0.1}>
+      <TiltCard style={{ ...D.budgetCard, padding: "20px 48px" }} delay={0.1}>
         <div style={D.budgetTop}>
           <div>
             <p style={D.budgetLabel}>This Month's Budget</p>
@@ -294,7 +297,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
 
       {/* ── AI Analysis Summary Card ── */}
       {expenses.length >= 3 && (
-        <TiltCard style={{ ...D.overviewCard, background:"linear-gradient(135deg, var(--bg-card), var(--bg-input))", border:"1px solid var(--accent-subtle)" }} delay={0.15}>
+        <TiltCard style={{ ...D.overviewCard, padding: "18px 48px", background:"linear-gradient(135deg, var(--bg-card), var(--bg-input))", border:"1px solid var(--accent-subtle)" }} delay={0.15}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <div style={{ width:36, height:36, borderRadius:"50%", background:"var(--accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -592,11 +595,6 @@ const D = {
   welcomeBtnOutline:{ background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"10px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)", fontWeight:600 },
   quickTips:      { display:"flex", flexDirection:"column", gap:8, marginTop:12, width:"100%", maxWidth:380 },
   quickTip:       { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", fontSize:12, color:"var(--text-secondary)", textAlign:"left", fontWeight:500 },
-  // All-time banner
-  allTimeBanner:  { background:"linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", border:"1px solid var(--border)", borderRadius:16, padding:"16px", backdropFilter:"blur(12px)" },
-  allTimeHeader:  { display:"flex", alignItems:"center", gap:8, marginBottom:12 },
-  allTimeGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))", gap:10 },
-  allTimeStat:    { background:"var(--bg-input)", borderRadius:14, padding:"12px 8px", textAlign:"center", border:"1px solid var(--border-light)" },
   // Budget card
   budgetCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"18px 20px", backdropFilter:"blur(12px)" },
   budgetTop:      { display:"flex", justifyContent:"space-between", marginBottom:14 },
