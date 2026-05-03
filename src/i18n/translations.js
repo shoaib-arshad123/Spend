@@ -107,32 +107,30 @@ export const translations = {
 
 export const getCategoryIcon = (cat) => {
   if (!cat) return "📦";
-  const normalized = cat.toLowerCase();
-  const icons = {
-    food: "🍔",
-    transport: "🚌",
-    books: "📚",
-    health: "💊",
-    entertainment: "🎮",
-    clothing: "👕",
-    savings: "💰",
-    other: "📦",
-  };
-  return icons[normalized] || "📦";
+  const n = cat.toLowerCase();
+  if (n.includes("food") || n.includes("din")) return "🍔";
+  if (n.includes("trans") || n.includes("car") || n.includes("ride")) return "🚌";
+  if (n.includes("book") || n.includes("educ") || n.includes("stat")) return "📚";
+  if (n.includes("health") || n.includes("med") || n.includes("fit")) return "💊";
+  if (n.includes("ent") || n.includes("game") || n.includes("mov")) return "🎮";
+  if (n.includes("shop") || n.includes("cloth")) return "🛍️";
+  if (n.includes("bill") || n.includes("util")) return "💡";
+  if (n.includes("trav")) return "✈️";
+  if (n.includes("sav")) return "💰";
+  return "📦";
 };
 
 export const getCategoryColor = (cat) => {
   if (!cat) return "#6b7280";
-  const normalized = cat.toLowerCase();
-  const colors = {
-    food: "#f59e0b",
-    transport: "#3b82f6",
-    books: "#8b5cf6",
-    health: "#10b981",
-    entertainment: "#ec4899",
-    clothing: "#f97316",
-    savings: "#10b981",
-    other: "#6b7280",
-  };
-  return colors[normalized] || "#6b7280";
+  const n = cat.toLowerCase();
+  if (n.includes("food") || n.includes("din")) return "#f5b800";
+  if (n.includes("trans") || n.includes("car") || n.includes("ride")) return "#3b82f6";
+  if (n.includes("book") || n.includes("educ") || n.includes("stat")) return "#8b5cf6";
+  if (n.includes("health") || n.includes("med") || n.includes("fit")) return "#10b981";
+  if (n.includes("ent") || n.includes("game") || n.includes("mov")) return "#ec4899";
+  if (n.includes("shop") || n.includes("cloth")) return "#f97316";
+  if (n.includes("bill") || n.includes("util")) return "#6366f1";
+  if (n.includes("trav")) return "#06b6d4";
+  if (n.includes("sav")) return "#10b981";
+  return "#6b7280";
 };

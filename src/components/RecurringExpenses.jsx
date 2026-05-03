@@ -18,7 +18,7 @@ const FREQ_OPTIONS = [
 ];
 
 const FREQ_COLORS = {
-  daily: "#3b82f6", weekly: "#8b5cf6", monthly: "#10b981", yearly: "#f59e0b"
+  daily: "#3b82f6", weekly: "#8b5cf6", monthly: "#10b981", yearly: "#f5b800"
 };
 
 const calculateNextDate = (current, freq) => {
@@ -31,7 +31,7 @@ const calculateNextDate = (current, freq) => {
 };
 
 export default function RecurringExpenses({ setActiveTab }) {
-  const { token, categories, pushToast, pushNotification, isLoading: appLoading, addExpense, recurring, setRecurring, refreshRecurring } = useApp();
+  const { token, categories, pushToast, pushNotification, isLoading: appLoading, addExpense, expenses, recurring, setRecurring, refreshRecurring } = useApp();
   const [processingId, setProcessingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ amount: "", category: "", description: "", frequency: "monthly", startDate: new Date().toISOString().slice(0, 10) });
@@ -142,6 +142,7 @@ export default function RecurringExpenses({ setActiveTab }) {
   const upcomingDue = [...recurring].filter(r => r.isActive).sort((a, b) => new Date(a.nextDueDate) - new Date(b.nextDueDate)).slice(0, 5);
 
   const getIcon = (catName) => categories.find(c => c.name === catName)?.icon || "📦";
+  const billHistory = (expenses || []).filter(e => e.description?.startsWith("Bill Paid: ")).slice(0, 15);
 
   if (appLoading) {
     return (
@@ -344,31 +345,61 @@ export default function RecurringExpenses({ setActiveTab }) {
           </div>
         )}
       </div>
+
+      {/* Bill Payment History */}
+      {billHistory.length > 0 && (
+        <div style={S.section}>
+          <h3 style={S.sectionTitle}>💳 Payment History</h3>
+          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
+            {billHistory.map((exp, i) => (
+              <motion.div 
+                key={exp.id || i} 
+                initial={{ opacity:0, x:-5 }} animate={{ opacity:1, x:0 }} transition={{ delay: i*0.05 }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < billHistory.length - 1 ? "1px solid var(--border-light)" : "none", background: "rgba(255,255,255,0.02)" }}
+                whileHover={{ background: "rgba(255,255,255,0.05)" }}
+              >
+                <div style={{ width:32, height:32, borderRadius:8, background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>
+                  {getIcon(exp.category)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{exp.description?.replace("Bill Paid: ", "") || exp.category}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontWeight:500 }}>{new Date(exp.date).toLocaleDateString('en-PK', { month:'short', day:'numeric' })}</p>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: "var(--red)" }}>−{formatPKR(exp.amount)}</span>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: "var(--green)", background: "var(--green-bg)", padding: "1px 5px", borderRadius:4, display:"inline-block", marginLeft:4 }}>PAID</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const S = {
-  container: { padding: 18, maxWidth: 900, margin: "0 auto" },
-  summaryRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 },
-  summaryCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 },
-  summaryValue: { margin: 0, fontSize: 18, fontWeight: 800, color: "var(--text-primary)" },
-  summaryLabel: { margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500 },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "var(--accent)", border: "none", color: "#111", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" },
-  processBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)" },
-  formCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px", marginBottom: 20, overflow: "hidden" },
-  formTitle: { margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" },
+  container: { padding: "20px 16px", maxWidth: 900, margin: "0 auto" },
+  summaryRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 },
+  summaryCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, backdropFilter: "blur(12px)" },
+  summaryValue: { margin: 0, fontSize: 20, fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.5px" },
+  summaryLabel: { margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", background: "linear-gradient(135deg, var(--accent), #f97316)", border: "none", color: "#111", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" },
+  processBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", backdropFilter: "blur(12px)", transition: "all 0.2s" },
+  formCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: "24px", marginBottom: 20, overflow: "hidden", backdropFilter: "blur(12px)" },
+  formTitle: { margin: "0 0 16px", fontSize: 16, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" },
   formGrid: { display: "flex", flexDirection: "column", gap: 14 },
-  formLabel: { fontSize: 12, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, display: "block" },
-  backCircle: { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
-  input: { width: "100%", padding: "10px 14px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text-primary)", fontSize: 13, fontFamily: "var(--font)", outline: "none" },
-  freqBtn: { flex: 1, padding: "8px 6px", background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 8, color: "var(--text-muted)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s" },
-  saveBtn: { width: "100%", marginTop: 16, padding: "12px", background: "var(--accent)", border: "none", color: "#111", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" },
+  formLabel: { fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: "0.08em" },
+  backCircle: { width: 38, height: 38, borderRadius: "50%", background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backdropFilter: "blur(12px)" },
+  input: { width: "100%", padding: "12px 14px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text-primary)", fontSize: 14, fontFamily: "var(--font)", outline: "none" },
+  freqBtn: { flex: 1, padding: "8px 6px", background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 10, color: "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s" },
+  saveBtn: { width: "100%", marginTop: 20, padding: "14px", background: "linear-gradient(135deg, var(--accent), #f97316)", border: "none", color: "#111", borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font)", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" },
   section: { marginBottom: 24 },
-  sectionTitle: { margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 },
-  upcomingCard: { minWidth: 130, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", flexShrink: 0 },
-  itemCard: { display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, transition: "all 0.2s" },
-  freqBadge: { fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, textTransform: "uppercase" },
-  iconBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" },
-  payBtn: { background: "var(--accent)", border: "none", color: "#111", padding: "4px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" }
+  sectionTitle: { margin: "0 0 14px", fontSize: 15, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, letterSpacing: "-0.5px" },
+  upcomingCard: { minWidth: 130, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", flexShrink: 0, backdropFilter: "blur(12px)" },
+  itemCard: { display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, transition: "all 0.2s", backdropFilter: "blur(12px)" },
+  freqBadge: { fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 6, textTransform: "uppercase" },
+  iconBtn: { background: "transparent", border: "none", cursor: "pointer", padding: 6, display: "flex", alignItems: "center" },
+  payBtn: { background: "var(--accent)", border: "none", color: "#111", padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s" },
+  label: { display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" },
 };

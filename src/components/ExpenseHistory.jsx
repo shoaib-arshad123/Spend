@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatPKR } from "../utils/helpers";
 import { translations } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
-import { Download, Edit2, FileText, PiggyBank, ChevronLeft } from "lucide-react";
+import { Download, Edit2, FileText, PiggyBank, ChevronLeft, Trash2, AlertTriangle } from "lucide-react";
 import { getCategoryIcon } from "../i18n/translations";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveTab }) {
-  const { editExpense, categories, user, budgetHistory, isLoading } = useApp();
+  const { editExpense, categories, user, budgetHistory, isLoading, clearAllExpenses, clearMonthExpenses } = useApp();
   const [search,  setSearch]  = useState("");
   const [filter,  setFilter]  = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -60,6 +60,15 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
     if (cat?.icon) return cat.icon;
     return getCategoryIcon(catName);
   };
+
+  // Build a map of month -> budget for per-month display
+  const budgetHistoryMap = useMemo(() => {
+    return (budgetHistory || []).reduce((map, item) => {
+      const key = `${item.year}-${String(item.month).padStart(2, "0")}`;
+      map[key] = item.amount;
+      return map;
+    }, {});
+  }, [budgetHistory]);
 
   const exportPDF = () => {
     if (filtered.length === 0) return;
@@ -171,14 +180,6 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
     );
   }
 
-  // Build a map of month -> budget for per-month display
-  const budgetHistoryMap = useMemo(() => {
-    return (budgetHistory || []).reduce((map, item) => {
-      const key = `${item.year}-${String(item.month).padStart(2, "0")}`;
-      map[key] = item.amount;
-      return map;
-    }, {});
-  }, [budgetHistory]);
 
   return (
     <div style={H.container}>
@@ -208,7 +209,7 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
         </select>
         <motion.button style={H.exportBtn} onClick={exportPDF} title="Download PDF Report" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Download size={16} />
-          <span style={{ fontSize:11, fontWeight:700 }}>Download PDF Report</span>
+          <span style={{ fontSize:11, fontWeight:700 }}>PDF</span>
         </motion.button>
       </div>
 
@@ -279,7 +280,7 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ fontSize: 16, fontWeight: 800, color: "var(--red)" }}>{formatPKR(data.spent)}</span>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>Spent this month</p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>{data.expenses.length} expenses</p>
               </div>
             </div>
             
@@ -342,7 +343,7 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
                 <select value={editForm.category} onChange={e=>setEditForm(f=>({...f, category:e.target.value}))} style={H.modalInput}>
                   {categories.length > 0 
                     ? categories.map(c => <option key={c.name} value={c.name}>{getIcon(c.name)} {c.name}</option>)
-                    : ["Food", "Transport", "Books", "Health", "Entertainment", "Clothing", "Other"].map(c => <option key={c} value={c}>{getIcon(c)} {c}</option>)
+                    : ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"].map(c => <option key={c} value={c}>{getIcon(c)} {c}</option>)
                   }
                 </select>
 
@@ -388,48 +389,52 @@ function formatDate(ds) {
 }
 
 const H = {
-  container:     { padding:18, display:"flex", flexDirection:"column", gap:12, maxWidth:800, margin:"0 auto" },
-  toolbar:       { display:"flex", gap:6, flexWrap:"wrap" },
-  searchWrap:    { flex:1, display:"flex", alignItems:"center", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", padding:"0 12px" },
-  searchIcon:    { fontSize:14, flexShrink:0, marginRight:4 },
+  container:     { padding:"12px 16px", display:"flex", flexDirection:"column", gap:12, maxWidth:860, margin:"0 auto", position: "relative" },
+  toolbar:       { display:"flex", gap:8, flexWrap:"wrap" },
+  searchWrap:    { flex:1, display:"flex", alignItems:"center", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, overflow:"hidden", padding:"0 12px", backdropFilter:"blur(12px)" },
+  searchIcon:    { fontSize:14, flexShrink:0, marginRight:6 },
   searchInput:   { flex:1, background:"transparent", border:"none", color:"var(--text-primary)", fontSize:13, padding:"10px 0", outline:"none", fontFamily:"var(--font)" },
   clearBtn:      { background:"transparent", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:13, padding:"0 4px" },
-  select:        { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:10, padding:"10px 12px", fontSize:12, outline:"none", cursor:"pointer", fontFamily:"var(--font)" },
-  exportBtn:     { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:10, padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:6 },
-  chips:         { display:"flex", gap:6, flexWrap:"wrap" },
-  summaryBar:    { display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 16px" },
-  summaryItem:   { fontSize:12, color:"var(--text-muted)" },
-  summaryDivider:{ width:1, height:12, background:"var(--border)" },
-  monthHeader:   { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 20px", borderRadius:"12px 12px 0 0", border:"1px solid var(--border)", borderBottom:"none" },
-  dateHeader:    { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 4px 6px" },
-  dateLabel:     { fontSize:12, fontWeight:700, color:"var(--text-secondary)", textTransform:"uppercase", letterSpacing:"0.08em" },
-  dateTotalBadge:{ fontSize:11, color:"var(--red)", fontWeight:700, background:"var(--red-bg)", padding:"2px 8px", borderRadius:10 },
-  group:         { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:"0 0 12px 12px", overflow:"hidden" },
-  row:           { display:"flex", alignItems:"center", gap:10, padding:"12px 14px", borderBottom:"1px solid var(--border-light)" },
-  rowIcon:       { width:40, height:40, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
-  rowNote:       { margin:0, fontSize:13, color:"var(--text-primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  select:        { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:12, padding:"10px 14px", fontSize:12, outline:"none", cursor:"pointer", fontFamily:"var(--font)", backdropFilter:"blur(12px)", fontWeight: 600 },
+  exportBtn:     { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:12, padding:"10px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, backdropFilter:"blur(12px)", fontWeight: 700 },
+  chips:         { display:"flex", gap:6, flexWrap:"wrap", marginTop: 2 },
+  summaryBar:    { display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 16px", backdropFilter:"blur(12px)" },
+  summaryItem:   { fontSize:12, color:"var(--text-muted)", fontWeight: 500 },
+  summaryDivider:{ width:1, height:14, background:"var(--border)" },
+  monthHeader:   { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderRadius:"14px 14px 0 0", border:"1px solid var(--border)", borderBottom:"none", flexWrap: "wrap", gap: 8, backdropFilter:"blur(12px)" },
+  dateHeader:    { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 6px 6px" },
+  dateLabel:     { fontSize:11, fontWeight:800, color:"var(--text-secondary)", textTransform:"uppercase", letterSpacing:"0.1em" },
+  dateTotalBadge:{ fontSize:11, color:"var(--red)", fontWeight:800, background:"var(--red-bg)", padding:"2px 8px", borderRadius:10 },
+  group:         { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:"0 0 14px 14px", overflow:"hidden", backdropFilter:"blur(12px)" },
+  row:           { display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:"1px solid var(--border-light)" },
+  rowIcon:       { width:38, height:38, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  rowNote:       { margin:0, fontSize:14, color:"var(--text-primary)", fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   rowMeta:       { margin:"4px 0 0", display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" },
-  catTag:        { fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:6 },
-  metaTime:      { fontSize:10, color:"var(--text-muted)" },
-  metaTxn:       { fontSize:10, color:"var(--text-secondary)", fontWeight:600, background:"var(--bg-elevated)", padding:"2px 6px", borderRadius:4 },
+  catTag:        { fontSize:10, fontWeight:800, padding:"2px 6px", borderRadius:6 },
+  metaTime:      { fontSize:10, color:"var(--text-muted)", fontWeight: 500 },
+  metaTxn:       { fontSize:10, color:"var(--text-secondary)", fontWeight:700, background:"var(--bg-elevated)", padding:"2px 6px", borderRadius:4 },
   srcBadge:      { fontSize:10, color:"var(--blue)", background:"var(--blue-bg)", padding:"2px 6px", borderRadius:6 },
-  rowAmt:        { fontSize:13, color:"var(--red)", fontWeight:700, whiteSpace:"nowrap" },
+  rowAmt:        { fontSize:14, color:"var(--red)", fontWeight:800, whiteSpace:"nowrap", letterSpacing:"-0.5px" },
   editBtn:       { background:"var(--accent-subtle)", border:"none", cursor:"pointer", color:"var(--accent)", padding:"6px 10px", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" },
   deleteBtn:     { background:"var(--red-bg)", border:"none", cursor:"pointer", fontSize:14, color:"var(--red)", padding:"6px 10px", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" },
-  confirmYes:    { background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", borderRadius:8, padding:"5px 10px", fontSize:11, cursor:"pointer", fontFamily:"var(--font)", fontWeight:600 },
-  confirmNo:     { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:8, padding:"5px 10px", fontSize:11, cursor:"pointer", fontFamily:"var(--font)", fontWeight:600 },
-  clearSearchBtn:{ marginTop:8, background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontFamily:"var(--font)" },
-  modalOverlay:  { position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(5px)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 },
-  modal:         { width:"100%", maxWidth:420, background:"var(--bg-card)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 20px 40px rgba(0,0,0,0.3)", overflow:"hidden" },
-  modalTitle:    { margin:0, padding:"20px", fontSize:18, fontWeight:800, color:"var(--text-primary)", borderBottom:"1px solid var(--border-light)", textAlign:"center" },
-  modalBody:     { padding:"24px 20px", display:"flex", flexDirection:"column", gap:16 },
-  modalLabel:    { fontSize:11, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:-8 },
-  modalInput:    { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:10, padding:"10px 14px", fontSize:14, outline:"none", fontFamily:"var(--font)" },
-  modalFooter:   { padding:"16px 20px", background:"var(--bg-secondary)", borderTop:"1px solid var(--border-light)", display:"flex", gap:10, justifyContent:"flex-end" },
-  modalCancel:   { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:500, fontFamily:"var(--font)" },
-  modalSave:     { background:"var(--accent)", border:"none", color:"#111", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" },
-  typeFilters:   { display:"flex", gap:8, flexWrap:"wrap", marginBottom:12 },
+  confirmYes:    { background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", borderRadius:8, padding:"6px 12px", fontSize:11, cursor:"pointer", fontFamily:"var(--font)", fontWeight:700 },
+  confirmNo:     { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:8, padding:"6px 12px", fontSize:11, cursor:"pointer", fontFamily:"var(--font)", fontWeight:700 },
+  clearSearchBtn:{ marginTop:8, background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 16px", borderRadius:10, cursor:"pointer", fontSize:12, fontFamily:"var(--font)", fontWeight: 600 },
+  modalOverlay:  { position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(8px)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 },
+  modal:         { width:"100%", maxWidth:400, background:"var(--bg-card)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 24px 48px rgba(0,0,0,0.4)", overflow:"hidden" },
+  modalTitle:    { margin:0, padding:"16px", fontSize:18, fontWeight:900, color:"var(--text-primary)", borderBottom:"1px solid var(--border-light)", textAlign:"center", letterSpacing:"-0.5px" },
+  modalBody:     { padding:"20px 16px", display:"flex", flexDirection:"column", gap:14 },
+  modalLabel:    { fontSize:11, fontWeight:800, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:-6 },
+  modalInput:    { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:10, padding:"12px 14px", fontSize:14, outline:"none", fontFamily:"var(--font)" },
+  modalFooter:   { padding:"14px 16px", background:"var(--bg-secondary)", borderTop:"1px solid var(--border-light)", display:"flex", gap:10, justifyContent:"flex-end" },
+  modalCancel:   { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 14px", borderRadius:10, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"var(--font)" },
+  modalSave:     { background:"var(--accent)", border:"none", color:"#111", padding:"8px 14px", borderRadius:10, cursor:"pointer", fontSize:13, fontWeight:800, fontFamily:"var(--font)" },
+  typeFilters:   { display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 },
   pill:          { padding:"6px 14px", borderRadius:10, fontSize:12, fontWeight:600, border:"1px solid var(--border)", background:"var(--bg-card)", color:"var(--text-secondary)", cursor:"pointer", transition:"0.2s" },
-  pillActive:    { padding:"6px 14px", borderRadius:10, fontSize:12, fontWeight:700, border:"1px solid var(--accent)", background:"var(--accent)", color:"#111", cursor:"pointer", boxShadow:"0 4px 10px rgba(245,158,11,0.2)" },
-  backCircle:    { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
+  pillActive:    { padding:"6px 14px", borderRadius:10, fontSize:12, fontWeight:800, border:"1px solid var(--accent)", background:"var(--accent)", color:"#111", cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.2)" },
+  backCircle:    { width:34, height:34, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", backdropFilter:"blur(12px)" },
+  bulkConfirmBar:{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", background:"var(--red-bg)", border:"1px solid var(--red)", borderRadius:12, flexWrap:"wrap" },
+  bulkYes:       { background:"var(--red)", border:"none", color:"#fff", padding:"6px 14px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"var(--font)" },
+  bulkNo:        { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"6px 14px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"var(--font)" },
+  monthClearBtn: { background:"var(--red-bg)", border:"1px solid rgba(239,68,68,0.3)", color:"var(--red)", width:30, height:30, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 },
 };

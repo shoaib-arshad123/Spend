@@ -136,7 +136,7 @@ export default function SmartAdvice({ t, lang, expenses, budget, setActiveTab })
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             {sortedCats.map(([cat, amt], i) => {
               const pct = totalSpent>0 ? Math.round((amt/totalSpent)*100) : 0;
-              const barColors = ["#f59e0b","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#6b7280"];
+              const barColors = ["#f5b800","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#6b7280"];
               return (
                 <div key={cat} style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <span style={{ fontSize:18, width:24, flexShrink:0 }}>{getCategoryIcon(cat)||"📦"}</span>
@@ -231,17 +231,17 @@ function getPeakHour(expenses) {
 }
 
 const SA = {
-  container:   { padding:18, display:"flex", flexDirection:"column", gap:14, maxWidth:720, margin:"0 auto" },
-  predBanner:  { display:"flex", alignItems:"center", gap:12, padding:"14px 18px", borderRadius:14, border:"1px solid" },
-  card:        { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px" },
-  cardTitle:   { margin:"0 0 16px", fontSize:15, fontWeight:700, color:"var(--text-primary)" },
-  tipLabel:     { fontSize:11, fontWeight:700, color:"var(--accent)", marginBottom:4 },
-  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
-  scoreCircle: { display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 },
-  adviceItem:  { display:"flex", gap:10, alignItems:"flex-start", background:"var(--bg-input)", borderRadius:8, padding:"10px 12px" },
-  tipsGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 },
-  tipCard:     { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:12, padding:"14px", cursor:"default" },
-  patternGrid: { display:"flex", gap:4, alignItems:"flex-end", height:60 },
-  patternBar:  { flex:1, display:"flex", flexDirection:"column", gap:3, height:"100%" },
-  patternTrack:{ flex:1, display:"flex", flexDirection:"column", justifyContent:"flex-end" },
+  container:   { padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 720, margin: "0 auto" },
+  predBanner:  { display: "flex", alignItems: "center", gap: 14, padding: "16px 20px", borderRadius: 20, border: "1px solid", backdropFilter: "blur(12px)" },
+  card:        { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: "20px 24px", backdropFilter: "blur(12px)" },
+  cardTitle:   { margin: "0 0 16px", fontSize: 15, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" },
+  tipLabel:    { fontSize: 11, fontWeight: 800, color: "var(--accent)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" },
+  backCircle:  { width: 38, height: 38, borderRadius: "50%", background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backdropFilter: "blur(12px)" },
+  scoreCircle: { display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 },
+  adviceItem:  { display: "flex", gap: 10, alignItems: "flex-start", background: "var(--bg-input)", borderRadius: 12, padding: "12px 14px" },
+  tipsGrid:    { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12 },
+  tipCard:     { background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px", cursor: "default", transition: "transform 0.2s" },
+  patternGrid: { display: "flex", gap: 4, alignItems: "flex-end", height: 60 },
+  patternBar:  { flex: 1, display: "flex", flexDirection: "column", gap: 4, height: "100%" },
+  patternTrack:{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" },
 };

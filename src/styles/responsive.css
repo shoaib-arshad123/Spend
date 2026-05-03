@@ -1,0 +1,143 @@
+/* Responsive Utilities */
+:root {
+  --container-max-width: 1200px;
+  --section-padding: 80px 24px;
+  --section-padding-mobile: 40px 16px;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+  
+  .hide-mobile {
+    display: none !important;
+  }
+
+  body {
+    font-size: 14px;
+  }
+}
+
+/* Landing Page Specific Responsiveness */
+.hero-title {
+  font-size: clamp(32px, 8vw, 64px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -2px;
+}
+
+.section-title {
+  font-size: clamp(24px, 5vw, 42px);
+  line-height: 1.2;
+}
+
+/* Grid Utilities */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--min-width, 280px), 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(auto-fit, minmax(var(--min-width-mobile, 140px), 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsive-grid {
+    grid-template-columns: repeat(auto-fit, minmax(var(--min-width-mobile, 100%), 1fr));
+    gap: 16px;
+  }
+}
+
+/* Dashboard specific */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Navbar fixes */
+@media (max-width: 768px) {
+  .nav-inner {
+    padding: 10px 16px !important;
+  }
+  
+  .nav-logo-text {
+    font-size: 16px !important;
+  }
+  
+  .nav-cta-group {
+    gap: 6px !important;
+  }
+}
+
+/* Footer fixes */
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 40px;
+}
+
+@media (max-width: 1024px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* Chart container responsiveness */
+.recharts-responsive-container {
+  min-height: 150px;
+}
+
+@media (max-width: 480px) {
+  .recharts-responsive-container {
+    min-height: 120px;
+  }
+}
+
+/* Utility for aspect ratio containers */
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+/* Button scaling */
+@media (max-width: 480px) {
+  .btn-scale {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Mobile text truncation */
+.text-truncate-mobile {
+  @media (max-width: 600px) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

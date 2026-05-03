@@ -3,12 +3,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { generateId, getAutoCategory } from "../utils/helpers";
 import { getCategoryIcon, getCategoryColor, translations } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Mic, Camera, Sparkles } from "lucide-react";
 import VoiceButton from "./VoiceInput";
 import BillScanner from "./BillScanner";
 
-const CATS = ["food","transport","books","health","entertainment","clothing","savings","other"];
-const CAT_COLORS = { food:"#f59e0b", transport:"#3b82f6", books:"#8b5cf6", health:"#10b981", entertainment:"#ec4899", clothing:"#f97316", savings:"#10b981", other:"#6b7280" };
+const CATS = ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"];
+const CAT_COLORS = { 
+  "Food & Dining": "#f5b800", 
+  "Transportation": "#3b82f6", 
+  "Education": "#8b5cf6", 
+  "Health & Fitness": "#10b981", 
+  "Entertainment": "#ec4899", 
+  "Shopping": "#f97316", 
+  "Bills & Utilities": "#6366f1",
+  "Travel": "#06b6d4",
+  "Other": "#6b7280" 
+};
 
 export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
   const { pushToast, categories } = useApp();
@@ -21,9 +31,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0,10));
   const [source, setSource] = useState("manual");
 
-  // Default color for categories if not specified
-  const DEFAULT_COLOR = "#f59e0b";
-
+  const DEFAULT_COLOR = "#f5b800";
   const timeStr = new Date().toTimeString().slice(0,5);
 
   const handleVoice = ({ transcript, amount: va, category: vc }) => {
@@ -55,60 +63,22 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
   return (
     <>
       <div style={AE.container}>
-        {/* Header */}
-        <div style={AE.pageHeader}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <motion.button 
-              style={AE.backCircle} 
-              onClick={() => setActiveTab("dashboard")}
-              whileHover={{ scale:1.1, background:"var(--bg-elevated)" }}
-              whileTap={{ scale:0.9 }}
-            >
-              <ChevronLeft size={20} color="var(--text-secondary)" />
-            </motion.button>
-            <div>
-              <h2 style={AE.heading}>{t.addNew}</h2>
-              <p style={AE.headingSub}>Track every rupee to build financial awareness</p>
-            </div>
-          </div>
-          <div style={{ display:"flex", gap:8, alignItems: "center" }}>
-            <div style={{ position: "relative" }}>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                style={{ 
-                  position: "absolute", 
-                  top: -20, 
-                  right: -10, 
-                  background: "var(--accent)", 
-                  color: "#111", 
-                  fontSize: 9, 
-                  fontWeight: 900, 
-                  padding: "2px 6px", 
-                  borderRadius: 4,
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 2px 8px rgba(245,158,11,0.4)",
-                  zIndex: 2
-                }}
-              >
-                TRY VOICE! 🎙️
-              </motion.div>
-              <motion.div
-                animate={{ boxShadow: ["0 0 0 0px rgba(245,158,11,0.2)", "0 0 0 6px rgba(245,158,11,0)"] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                style={{ borderRadius: 9 }}
-              >
-                <VoiceButton onResult={handleVoice} />
-              </motion.div>
-            </div>
-            <motion.button style={AE.scanBtn} onClick={() => setShowScan(true)} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>
-              📸 Scan Bill
-            </motion.button>
+        {/* ── HEADER ── perfectly aligned back + title on one line */}
+        <div style={AE.header}>
+          <motion.button 
+            style={AE.backCircle} 
+            onClick={() => setActiveTab("dashboard")}
+            whileHover={{ scale:1.1, background:"var(--bg-elevated)" }}
+            whileTap={{ scale:0.9 }}
+          >
+            <ChevronLeft size={20} color="var(--text-secondary)" />
+          </motion.button>
+          <div style={{ flex:1 }}>
+            <h2 style={AE.heading}>{t.addNew}</h2>
           </div>
         </div>
 
-        {/* Time and Date row */}
+        {/* ── DATE & TIME ROW ── */}
         <div style={AE.timeRow}>
           <div style={{ ...AE.timePill, padding: "2px 10px" }}>
             <span>📅</span>
@@ -123,7 +93,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
           <div style={AE.timePill}><span>⏰</span>{timeStr}</div>
         </div>
 
-        {/* Amount input */}
+        {/* ── AMOUNT INPUT ── */}
         <div style={AE.amountSection}>
           <label style={AE.label}>AMOUNT (PKR)</label>
           <div style={AE.amountBox}>
@@ -151,33 +121,59 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
           )}
         </div>
 
-        {/* Category selector */}
+        {/* ── SMART INPUT: Voice & Scan ── Prominent action bar */}
+        <div style={AE.smartInputBar}>
+          <div style={AE.smartInputLeft}>
+            <Sparkles size={16} color="var(--accent)" />
+            <span style={AE.smartInputTitle}>Smart Input</span>
+            <span style={AE.smartInputSub}>Use voice or camera</span>
+          </div>
+          <div style={AE.smartInputActions}>
+            <motion.div
+              animate={{ boxShadow: ["0 0 0 0px rgba(245,184,0,0.3)", "0 0 0 5px rgba(245,184,0,0)"] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              style={{ borderRadius: 12, display:"flex" }}
+            >
+              <VoiceButton onResult={handleVoice} />
+            </motion.div>
+            <motion.button 
+              style={AE.scanBtn} 
+              onClick={() => setShowScan(true)} 
+              whileHover={{ scale:1.05 }} 
+              whileTap={{ scale:0.95 }}
+            >
+              <Camera size={16} />
+              <span>Scan</span>
+            </motion.button>
+          </div>
+        </div>
+
+        {/* ── CATEGORY SELECTOR ── */}
         <div style={AE.section}>
           <label style={AE.label}>CATEGORY</label>
           <div style={AE.catGrid}>
-            {(categories.length > 0 ? categories : [{name: 'Other'}]).map(cat => {
+            {(Array.isArray(categories) && categories.length > 0 ? categories : [{id:'def', name: 'Other', icon: '📌'}]).filter(Boolean).map(cat => {
               const active = category === cat.name;
               const color = cat.color || getCategoryColor(cat.name);
               const icon = cat.icon || getCategoryIcon(cat.name) || "📦";
               return (
                 <motion.button
-                  key={cat.name}
-                  style={{ ...AE.catBtn, background: active ? color+"18" : "var(--bg-input)", border:`1px solid ${active ? color : "var(--border)"}`, color: active ? color : "var(--text-muted)" }}
+                  key={cat.id || cat.name || Math.random()}
+                  style={{ ...AE.catBtn, background: active ? color+"18" : "var(--bg-input)", border:`2px solid ${active ? color : "var(--border)"}`, color: active ? color : "var(--text-muted)" }}
                   onClick={() => setCategory(cat.name)}
                   whileHover={{ scale:1.04 }}
                   whileTap={{ scale:0.96 }}
                 >
                   <span style={{ fontSize:22 }}>{icon}</span>
-                  <span style={{ fontSize:11, fontWeight: active ? 700 : 400, textTransform:"capitalize" }}>{cat.name}</span>
-                  {active && <motion.div layoutId="catDot" style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", width:4, height:4, borderRadius:"50%", background:color }} />}
+                  <span style={{ fontSize:10, fontWeight: active ? 800 : 500, textTransform:"capitalize", marginTop:2, lineHeight:1.2 }}>{cat.name}</span>
+                  {active && <motion.div layoutId="catDot" style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", width:5, height:5, borderRadius:"50%", background:color }} />}
                 </motion.button>
               );
             })}
           </div>
         </div>
 
-
-        {/* Note */}
+        {/* ── NOTE ── */}
         <div style={AE.section}>
           <label style={AE.label}>NOTE (OPTIONAL)</label>
           <input
@@ -206,18 +202,18 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
           )}
         </AnimatePresence>
 
-        {/* Buttons */}
+        {/* ── BUTTONS ── */}
         <div style={AE.btnRow}>
           <motion.button style={AE.cancelBtn} onClick={() => setActiveTab("dashboard")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>{t.cancel}</motion.button>
-          <motion.button style={AE.saveBtn} onClick={submit} whileHover={{ scale:1.02, boxShadow:"0 0 20px rgba(245,158,11,0.3)" }} whileTap={{ scale:0.97 }}>
+          <motion.button style={AE.saveBtn} onClick={submit} whileHover={{ scale:1.02, boxShadow:"0 0 20px rgba(245,184,0,0.3)" }} whileTap={{ scale:0.97 }}>
             💾 {t.save}
           </motion.button>
         </div>
 
-        {/* Tips bar */}
+        {/* ── TIPS ── */}
         <div style={AE.tipsGrid}>
-          <div style={AE.tipCard}><span>🎙️</span><span>Voice: "spent 200 on food"</span></div>
-          <div style={AE.tipCard}><span>📸</span><span>Scan receipt to auto-fill</span></div>
+          <div style={AE.tipCard}><span style={{ fontSize:16 }}>🎙️</span><span>Voice: "spent 200 on food"</span></div>
+          <div style={AE.tipCard}><span style={{ fontSize:16 }}>📸</span><span>Scan receipt to auto-fill</span></div>
         </div>
       </div>
 
@@ -227,34 +223,59 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
 }
 
 const AE = {
-  container:    { padding:20, display:"flex", flexDirection:"column", gap:18, maxWidth:540, margin:"0 auto" },
-  pageHeader:   { display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap" },
-  heading:      { margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
-  headingSub:   { margin:"3px 0 0", fontSize:12, color:"var(--text-muted)" },
-  scanBtn:      { background:"var(--blue-bg)", border:"1px solid var(--blue)", color:"var(--blue)", padding:"9px 14px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"var(--font)" },
-  timeRow:      { display:"flex", gap:8, flexWrap:"wrap" },
-  timePill:     { display:"flex", alignItems:"center", gap:5, background:"var(--bg-card)", border:"1px solid var(--border)", padding:"6px 12px", borderRadius:20, fontSize:12, color:"var(--text-secondary)" },
-  amountSection:{ background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:20 },
-  label:        { display:"block", fontSize:10, color:"var(--text-muted)", fontWeight:800, letterSpacing:"0.1em", marginBottom:10 },
-  amountBox:    { display:"flex", alignItems:"center", gap:8, marginBottom:14 },
-  currency:     { fontSize:28, color:"var(--accent)", fontWeight:700, flexShrink:0 },
-  amountInput:  { flex:1, background:"transparent", border:"none", color:"var(--text-primary)", fontSize:40, fontWeight:800, outline:"none", letterSpacing:"-1px", fontFamily:"var(--font)" },
-  quickRow:     { display:"flex", gap:8, flexWrap:"wrap" },
-  quickBtn:     { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"5px 12px", borderRadius:20, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"var(--font)" },
-  amountDisplay:{ margin:"10px 0 0", fontSize:13, color:"var(--accent)", fontWeight:600 },
-  section:      { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"16px 18px" },
-  catGrid:      { display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 },
-  catBtn:       { display:"flex", flexDirection:"column", alignItems:"center", gap:5, padding:"12px 6px", borderRadius:12, cursor:"pointer", position:"relative", fontFamily:"var(--font)" },
-  categoryBtn:  { display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"12px 6px", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, cursor:"pointer", transition:"0.2s" },
-  catIcon:      { fontSize:20 },
-  catLabel:     { fontSize:11, fontWeight:600, textTransform:"capitalize" },
-  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-input)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
-  noteInput:    { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:10, padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" },
-  errorBox:     { background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", padding:"10px 14px", borderRadius:8, fontSize:13 },
-  successBox:   { background:"var(--green-bg)", border:"1px solid var(--green)", padding:"14px 18px", borderRadius:12, display:"flex", alignItems:"center", gap:12 },
-  btnRow:       { display:"flex", gap:10 },
-  cancelBtn:    { flex:1, padding:"13px", background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:500, fontFamily:"var(--font)" },
-  saveBtn:      { flex:2, padding:"13px", background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
-  tipsGrid:     { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 },
-  tipCard:      { display:"flex", gap:8, alignItems:"center", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", fontSize:12, color:"var(--text-muted)" },
+  container:    { padding:"20px 16px", display:"flex", flexDirection:"column", gap:16, maxWidth:560, margin:"0 auto" },
+  
+  // Header - perfectly aligned row
+  header:       { display:"flex", alignItems:"center", gap:14 },
+  heading:      { margin:0, fontSize:24, fontWeight:900, background:"linear-gradient(135deg, var(--accent), #f97316)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:"-0.5px" },
+  backCircle:   { width:40, height:40, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", backdropFilter:"blur(12px)", flexShrink:0 },
+  
+  // Date/Time
+  timeRow:      { display:"flex", gap:10, flexWrap:"wrap" },
+  timePill:     { display:"flex", alignItems:"center", gap:6, background:"var(--bg-card)", border:"1px solid var(--border)", padding:"8px 14px", borderRadius:20, fontSize:13, color:"var(--text-secondary)", fontWeight: 600, backdropFilter:"blur(12px)" },
+  
+  // Amount
+  amountSection:{ background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:20, padding:20, backdropFilter:"blur(12px)" },
+  label:        { display:"block", fontSize:11, color:"var(--text-muted)", fontWeight:800, letterSpacing:"0.12em", marginBottom:12 },
+  amountBox:    { display:"flex", alignItems:"center", gap:10, marginBottom:16 },
+  currency:     { fontSize:32, color:"var(--accent)", fontWeight:800, flexShrink:0 },
+  amountInput:  { flex:1, background:"transparent", border:"none", color:"var(--text-primary)", fontSize:42, fontWeight:900, outline:"none", letterSpacing:"-1px", fontFamily:"var(--font)", minWidth:0 },
+  quickRow:     { display:"flex", gap:10, flexWrap:"wrap" },
+  quickBtn:     { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 16px", borderRadius:20, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" },
+  amountDisplay:{ margin:"12px 0 0", fontSize:14, color:"var(--accent)", fontWeight:700 },
+  
+  // Smart Input Bar (Voice + Scan)
+  smartInputBar: { 
+    display:"flex", alignItems:"center", justifyContent:"space-between", gap:12,
+    background:"linear-gradient(135deg, rgba(245,184,0,0.08), rgba(249,115,22,0.06))", 
+    border:"1px solid var(--accent-glow, rgba(245,184,0,0.25))", 
+    borderRadius:16, padding:"14px 18px",
+    backdropFilter:"blur(12px)"
+  },
+  smartInputLeft: { display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" },
+  smartInputTitle: { fontSize:14, fontWeight:800, color:"var(--text-primary)" },
+  smartInputSub: { fontSize:11, color:"var(--text-muted)", fontWeight:500 },
+  smartInputActions: { display:"flex", alignItems:"center", gap:10, flexShrink:0 },
+  scanBtn:      { display:"flex", alignItems:"center", gap:6, background:"var(--blue-bg)", border:"1px solid var(--blue)", color:"var(--blue)", padding:"10px 16px", borderRadius:12, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" },
+
+  // Category
+  section:      { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:20, padding:"16px 20px", backdropFilter:"blur(12px)" },
+  catGrid:      { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(75px, 1fr))", gap:10 },
+  catBtn:       { display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"12px 6px", borderRadius:14, cursor:"pointer", position:"relative", fontFamily:"var(--font)" },
+  
+  // Note
+  noteInput:    { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:14, padding:"12px 16px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" },
+  
+  // Feedback
+  errorBox:     { background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", padding:"12px 16px", borderRadius:12, fontSize:14, fontWeight: 600 },
+  successBox:   { background:"var(--green-bg)", border:"1px solid var(--green)", padding:"16px 20px", borderRadius:16, display:"flex", alignItems:"center", gap:14 },
+  
+  // Buttons
+  btnRow:       { display:"flex", gap:12, marginTop: 4 },
+  cancelBtn:    { flex:1, padding:"14px", background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:14, cursor:"pointer", fontSize:15, fontWeight:600, fontFamily:"var(--font)", backdropFilter:"blur(12px)" },
+  saveBtn:      { flex:2, padding:"14px", background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", borderRadius:14, cursor:"pointer", fontSize:15, fontWeight:800, fontFamily:"var(--font)" },
+  
+  // Tips
+  tipsGrid:     { display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop: 4 },
+  tipCard:      { display:"flex", gap:10, alignItems:"center", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"12px 14px", fontSize:12, color:"var(--text-muted)", backdropFilter:"blur(12px)", fontWeight: 500 },
 };

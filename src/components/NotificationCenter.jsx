@@ -6,7 +6,7 @@ import { CheckCircle2, AlertTriangle, AlertCircle, Info, Bell, X } from "lucide-
 // ─── TOAST CONTAINER ─────────────────────────────────────────────────────────
 const toastStyle = {
   success: { border:"#10b981", bg:"var(--green-bg)", icon: <CheckCircle2 size={16} /> },
-  warning: { border:"#f59e0b", bg:"var(--accent-subtle)", icon: <AlertTriangle size={16} /> },
+  warning: { border:"#f5b800", bg:"var(--accent-subtle)", icon: <AlertTriangle size={16} /> },
   danger:  { border:"#ef4444", bg:"var(--red-bg)", icon: <AlertCircle size={16} /> },
   info:    { border:"#3b82f6", bg:"var(--blue-bg)", icon: <Info size={16} /> },
 };
@@ -47,7 +47,7 @@ function timeAgo(iso) {
 
 const nTypeStyle = {
   success: { color:"var(--green)", bg:"var(--green-bg)" },
-  warning: { color:"#f59e0b",     bg:"var(--accent-subtle)" },
+  warning: { color:"#f5b800",     bg:"var(--accent-subtle)" },
   danger:  { color:"var(--red)",  bg:"var(--red-bg)" },
   info:    { color:"var(--blue)", bg:"var(--blue-bg)" },
 };

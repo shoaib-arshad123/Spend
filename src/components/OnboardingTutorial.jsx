@@ -10,7 +10,7 @@ function getSlides() {
       title:"Welcome to SpendSmart!",
       desc:"You've taken the first step toward smarter spending. Let's take a 30-second tour of your new financial companion.",
       tip:null,
-      color:"#f59e0b",
+      color:"#f5b800",
     },
     {
       icon: <Target size={40} />,
@@ -128,7 +128,7 @@ export default function OnboardingTutorial() {
             <button style={OB.prevBtn} onClick={() => setStep(s => s-1)}>← Previous</button>
           )}
           <motion.button
-            style={{ ...OB.nextBtn, marginLeft:"auto", background: isLast ? "linear-gradient(135deg,#f59e0b,#f97316)" : "var(--bg-elevated)" }}
+            style={{ ...OB.nextBtn, marginLeft:"auto", background: isLast ? "linear-gradient(135deg,#f5b800,#ffd04a)" : "var(--bg-elevated)" }}
             onClick={() => isLast ? finishOnboarding() : setStep(s => s+1)}
             whileHover={{ scale:1.03 }}
             whileTap={{ scale:0.97 }}

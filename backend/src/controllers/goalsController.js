@@ -47,8 +47,8 @@ export const addSavings = async (req, res) => {
     const { id } = req.params;
     const { amount } = req.body;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'Amount must be positive' });
+    if (!amount || amount === 0) {
+      return res.status(400).json({ success: false, message: 'Amount is required' });
     }
 
     const result = await pool.request()
@@ -57,7 +57,7 @@ export const addSavings = async (req, res) => {
       .input('amount', amount)
       .query(`
         UPDATE savings_goals 
-        SET savedAmount = savedAmount + @amount, 
+        SET savedAmount = CASE WHEN savedAmount + @amount < 0 THEN 0 ELSE savedAmount + @amount END, 
             isCompleted = CASE WHEN savedAmount + @amount >= targetAmount THEN 1 ELSE 0 END,
             updatedAt = GETDATE()
         OUTPUT INSERTED.*

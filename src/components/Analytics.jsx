@@ -11,7 +11,7 @@ import { useApp } from "../context/AppContext";
 import { PiggyBank, CalendarClock, ChevronLeft, Brain, Sparkles, TrendingDown, Target } from "lucide-react";
 import { getSmartAdvice } from "../utils/helpers";
 
-const COLORS = ["#f59e0b", "#3b82f6", "#8b5cf6", "#10b981", "#ec4899", "#f97316", "#06b6d4", "#ef4444", "#84cc16", "#6366f1", "#14b8a6", "#a855f7"];
+const COLORS = ["#f5b800", "#3b82f6", "#8b5cf6", "#10b981", "#ec4899", "#f97316", "#06b6d4", "#ef4444", "#84cc16", "#6366f1", "#14b8a6", "#a855f7"];
 const TT = { contentStyle: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text-primary)", fontSize: 12 }, cursor: { fill: "rgba(255,255,255,0.04)" } };
 
 const getLocalMonthKey = (date = new Date()) =>
@@ -161,7 +161,7 @@ const CategoryPieTooltip = ({ active, payload }) => {
   );
 };
 
-const TiltCard = ({ children, style }) => {
+const TiltCard = ({ children, style, className = "" }) => {
   const [t, setT] = useState({ x:0, y:0 });
   const handleMM = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -171,6 +171,7 @@ const TiltCard = ({ children, style }) => {
   };
   return (
     <motion.div
+      className={`card-hover ${className}`}
       onMouseMove={handleMM} onMouseLeave={() => setT({ x:0, y:0 })}
       animate={{ rotateY: t.x, rotateX: t.y, translateZ: t.x ? 20 : 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -400,7 +401,7 @@ export default function Analytics({ setActiveTab }) {
                   <PieChart>
                     <Pie data={weekendVsWeekday} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={2} dataKey="value">
                       <Cell fill="#3b82f6" />
-                      <Cell fill="#f59e0b" />
+                      <Cell fill="#f5b800" />
                     </Pie>
                     <Tooltip {...TT} formatter={(v) => [formatPKR(v), "Spent"]} />
                   </PieChart>
@@ -410,7 +411,7 @@ export default function Analytics({ setActiveTab }) {
                 {weekendVsWeekday.map((d, i) => (
                   <div key={d.name}>
                     <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: i === 0 ? "#3b82f6" : "#f59e0b", display: "inline-block" }} />
+                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: i === 0 ? "#3b82f6" : "#f5b800", display: "inline-block" }} />
                       {d.icon} {d.name}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{formatPKR(d.value)}</div>
@@ -497,12 +498,12 @@ export default function Analytics({ setActiveTab }) {
               <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} />
               <Tooltip {...TT} formatter={v => [`PKR ${v.toLocaleString()}`]} />
               <Line type="monotone" dataKey="cumulative" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Cumulative" />
-              <Line type="monotone" dataKey="amount" stroke="#f59e0b" strokeWidth={1} strokeDasharray="4 2" dot={false} name="Daily" />
+              <Line type="monotone" dataKey="amount" stroke="#f5b800" strokeWidth={1} strokeDasharray="4 2" dot={false} name="Daily" />
               {periodBudget > 0 && <Line type="monotone" dataKey={() => periodBudget} stroke="#ef4444" strokeDasharray="6 3" strokeWidth={1} dot={false} name="Budget" />}
             </LineChart>
           </ResponsiveContainer>
           <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-            {[["#8b5cf6", "Cumulative"], ["#f59e0b", "Daily"], periodBudget > 0 && ["#ef4444", "Budget limit"]].filter(Boolean).map(([c, l]) => (
+            {[["#8b5cf6", "Cumulative"], ["#f5b800", "Daily"], periodBudget > 0 && ["#ef4444", "Budget limit"]].filter(Boolean).map(([c, l]) => (
               <span key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-muted)" }}>
                 <span style={{ width: 12, height: 2, background: c, display: "inline-block", borderRadius: 1 }} />  {l}
               </span>
@@ -560,7 +561,7 @@ export default function Analytics({ setActiveTab }) {
         <div style={AN.chartCard}>
           <h3 style={AN.chartTitle}>⚙️ Input Methods</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 6 }}>
-            {[["✍️", "Manual", srcCounts.manual, "#3b82f6"], ["🎙️", "Voice Input", srcCounts.voice, "#10b981"], ["📸", "Bill Scanner", srcCounts.scanner, "#f59e0b"]].map(([ic, label, count, color]) => {
+            {[["✍️", "Manual", srcCounts.manual, "#3b82f6"], ["🎙️", "Voice Input", srcCounts.voice, "#10b981"], ["📸", "Bill Scanner", srcCounts.scanner, "#f5b800"]].map(([ic, label, count, color]) => {
               const p = filtered.length > 0 ? Math.round((count / filtered.length) * 100) : 0;
               return (
                 <div key={label}>
@@ -711,17 +712,17 @@ export default function Analytics({ setActiveTab }) {
 }
 
 const AN = {
-  container: { padding: 18, display: "flex", flexDirection: "column", gap: 14, maxWidth: 900, margin: "0 auto" },
-  periodBar: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" },
+  container: { padding:"12px 16px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 900, margin: "0 auto", position: "relative" },
+  periodBar: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--bg-card)", padding: "12px", borderRadius: 14, border: "1px solid var(--border)", backdropFilter: "blur(12px)" },
   periodBtns: { display: "flex", gap: 4 },
-  periodBtn: { padding: "6px 14px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "var(--font)" },
-  periodActive: { background: "var(--accent-subtle)", border: "1px solid var(--accent)", color: "var(--accent)" },
-  metricsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 },
-  metricCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 14px" },
-  metricValue: { margin: "4px 0 3px", fontSize: 16, fontWeight: 800, letterSpacing: "-0.3px" },
-  metricLabel: { margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500 },
-  twoCol: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(270px,1fr))", gap: 14 },
-  chartCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 18px" },
-  chartTitle: { margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" },
-  backCircle: { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
+  periodBtn: { padding: "6px 12px", background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "var(--font)", transition: "all 0.2s" },
+  periodActive: { background: "var(--accent-subtle)", border: "1px solid var(--accent)", color: "var(--accent)", boxShadow: "0 4px 12px -2px var(--accent-subtle)" },
+  metricsGrid: { display: "grid", gridTemplateColumns: window.innerWidth < 480 ? "repeat(2, 1fr)" : "repeat(auto-fit,minmax(120px,1fr))", gap: 10 },
+  metricCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "12px", backdropFilter: "blur(12px)" },
+  metricValue: { margin: "4px 0 2px", fontSize: 20, fontWeight: 900, letterSpacing: "-0.5px" },
+  metricLabel: { margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 600 },
+  twoCol: { display: "grid", gridTemplateColumns: window.innerWidth < 600 ? "1fr" : "repeat(auto-fit,minmax(280px,1fr))", gap: 12 },
+  chartCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: window.innerWidth < 480 ? "12px" : "16px", backdropFilter: "blur(12px)" },
+  chartTitle: { margin: "0 0 12px", fontSize: 14, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" },
+  backCircle: { width:34, height:34, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", backdropFilter: "blur(12px)" },
 };

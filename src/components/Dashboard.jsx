@@ -10,10 +10,10 @@ import { getCategoryColor, getCategoryIcon } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
 // CelebrationPopup removed from here, moved to MainApp.jsx
 
-const COLORS = ["#f59e0b","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#06b6d4","#ef4444","#84cc16","#6366f1"];
+const COLORS = ["#f5b800","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#06b6d4","#ef4444","#84cc16","#6366f1"];
 
 // 3D Tilt Card Component
-function TiltCard({ children, style, delay = 0 }) {
+function TiltCard({ children, style, delay = 0, className = "" }) {
   const ref = useRef(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -43,6 +43,7 @@ function TiltCard({ children, style, delay = 0 }) {
   return (
     <motion.div
       ref={ref}
+      className={`card-hover ${className}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       initial={{ opacity: 0, y: 20 }}
@@ -55,7 +56,7 @@ function TiltCard({ children, style, delay = 0 }) {
         rotateX,
         rotateY,
       }}
-      whileHover={{ scale: 1.01, zIndex: 10, boxShadow: "0 14px 18px -8px rgba(0, 0, 0, 0.16)" }}
+      whileHover={{ scale: 1.01, zIndex: 10 }}
     >
       <div style={{ transform: "translateZ(30px)" }}>
         {children}
@@ -90,7 +91,7 @@ function EmptyState({ icon, title, desc, action, onAction }) {
   );
 }
 
-const emptyBtn = { marginTop:6, background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"10px 22px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" };
+const emptyBtn = { marginTop:6, background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"10px 22px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" };
 
 // Custom tooltip for pie chart showing category name + amount
 const CategoryTooltip = ({ active, payload }) => {
@@ -196,12 +197,16 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
 
   return (
     <div style={D.container}>
+      <div className="bg-orb" style={{ top: "10%", right: "5%", width: 300, height: 300, background: "var(--accent-subtle)" }} />
+      <div className="bg-orb" style={{ bottom: "20%", left: "10%", width: 250, height: 250, background: "var(--purple-bg)" }} />
+
       {/* ⚠️ Due Subscriptions Alert */}
       {dueSubscriptions > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           style={D.alertBanner}
+          className="card-hover"
           onClick={() => setActiveTab("recurring")}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -247,34 +252,41 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         <div style={D.budgetTop}>
           <div>
             <p style={D.budgetLabel}>This Month's Budget</p>
-            <p style={D.budgetValue}>{formatPKR(effectiveMonthlyBudget)}</p>
-            {previousMonthCarryOver > 0 && (
-              <p style={{ margin:"2px 0 0", fontSize:10, color:"var(--green)" }}>
-                +{formatPKR(previousMonthCarryOver)} carried from last month
-              </p>
-            )}
+            <div style={{ display:"flex", alignItems:"baseline", gap: 6 }}>
+              <p style={D.budgetValue}>{formatPKR(effectiveMonthlyBudget)}</p>
+              {previousMonthCarryOver > 0 && (
+                <span style={{ fontSize:10, color:"var(--green)", fontWeight:700 }}>
+                  (+{formatPKR(previousMonthCarryOver)})
+                </span>
+              )}
+            </div>
           </div>
           <div style={{ textAlign:"right" }}>
             <p style={D.budgetLabel}>Remaining</p>
             <p style={{ ...D.budgetValue, color: remaining>=0?"var(--green)":"var(--red)" }}>{formatPKR(Math.abs(remaining))}{remaining<0?" over":""}</p>
           </div>
         </div>
-        <div style={{ marginTop: 8, fontSize: 12, color: remaining >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
-          {remaining >= 0 ? "On track for this month" : "Over budget this month"}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:6 }}>
+          <span style={{ fontSize:11, color: remaining >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+            {remaining >= 0 ? "On track" : "Over budget"}
+          </span>
+          <span style={{ fontSize:11, color:"var(--text-muted)", fontWeight:600 }}>{pct}% used</span>
         </div>
-        <div style={D.progressTrack}>
+        <div style={{...D.progressTrack, marginBottom:8}}>
           <motion.div
-            style={{ height:"100%", borderRadius:6, background: pct>=100?"var(--red)":pct>=80?"#f59e0b":"linear-gradient(90deg,var(--green),var(--accent))" }}
+            style={{ height:"100%", borderRadius:6, background: pct>=100?"var(--red)":pct>=80?"#f5b800":"linear-gradient(90deg,var(--green),var(--accent))" }}
             initial={{ width:0 }}
             animate={{ width:`${Math.min(pct,100)}%` }}
             transition={{ duration:1.2, ease:"easeOut" }}
           />
         </div>
         <div style={D.budgetFooter}>
-          <span style={{ fontSize:12, color:"var(--text-muted)" }}>{pct}% used · <span style={{ color:ti.color }}>{ti.label}</span> · Monthly resets each month</span>
+          <span style={{ fontSize:11, color:"var(--text-muted)" }}>
+            <span style={{ color:ti.color, fontWeight:700 }}>{ti.label}</span> · Resets monthly
+          </span>
           {predDays !== null && (
-            <span style={{ fontSize:12, color: predDays<5?"var(--red)":predDays<10?"var(--accent)":"var(--text-muted)" }}>
-              {predDays<1 ? "⚠️ Budget exhausted" : `⏱ ~${predDays} days left`}
+            <span style={{ fontSize:11, color: predDays<5?"var(--red)":predDays<10?"var(--accent)":"var(--text-muted)", fontWeight:600 }}>
+              {predDays<1 ? "⚠️ Empty" : `⏱ ~${predDays}d left`}
             </span>
           )}
         </div>
@@ -411,7 +423,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               <Tooltip {...TT} formatter={v=>[`PKR ${v.toLocaleString()}`,"Spent"]} />
               <Bar dataKey="amount" radius={[5,5,0,0]}>
                 {barData.map((entry, i) => (
-                  <Cell key={i} fill={entry.isToday ? "#f59e0b" : entry.amount>0 ? "#3b82f6" : "var(--border)"} />
+                  <Cell key={i} fill={entry.isToday ? "#f5b800" : entry.amount>0 ? "#3b82f6" : "var(--border)"} />
                 ))}
               </Bar>
             </BarChart>
@@ -522,7 +534,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
                   </div>
                   {displayBudget > 0 && (
                     <div style={{ height:4, background:"var(--border)", borderRadius:2 }}>
-                      <motion.div style={{ height:"100%", borderRadius:2, background: moPct>=100?"var(--red)":moPct>=80?"#f59e0b":"var(--green)" }} initial={{ width:0 }} animate={{ width:`${Math.min(moPct,100)}%` }} transition={{ duration:0.6 }} />
+                      <motion.div style={{ height:"100%", borderRadius:2, background: moPct>=100?"var(--red)":moPct>=80?"#f5b800":"var(--green)" }} initial={{ width:0 }} animate={{ width:`${Math.min(moPct,100)}%` }} transition={{ duration:0.6 }} />
                     </div>
                   )}
                 </motion.div>
@@ -571,71 +583,71 @@ function computeStreak(expenses) {
 }
 
 const D = {
-  container:      { padding:18, display:"flex", flexDirection:"column", gap:14, maxWidth:900, margin:"0 auto" },
-  rolloverNotice: { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"14px 18px", color:"var(--text-primary)", fontSize:13, display:"flex", alignItems:"center", gap:8 },
-  welcomeCard:    { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:18, padding:"40px 32px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12 },
-  welcomeTitle:   { margin:0, fontSize:24, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
-  welcomeSub:     { margin:0, fontSize:14, color:"var(--text-secondary)", maxWidth:400, lineHeight:1.7 },
-  welcomeBtn:     { background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"11px 22px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
-  welcomeBtnOutline:{ background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"11px 22px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)" },
-  quickTips:      { display:"flex", flexDirection:"column", gap:8, marginTop:10, width:"100%", maxWidth:360 },
-  quickTip:       { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 14px", fontSize:12, color:"var(--text-secondary)", textAlign:"left" },
+  container:      { padding:"12px 16px", display:"flex", flexDirection:"column", gap:12, maxWidth:900, margin:"0 auto", position: "relative" },
+  rolloverNotice: { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", color:"var(--text-primary)", fontSize:12, display:"flex", alignItems:"center", gap:8, backdropFilter:"blur(12px)" },
+  welcomeCard:    { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"20px 16px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12, backdropFilter:"blur(12px)" },
+  welcomeTitle:   { margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.5px" },
+  welcomeSub:     { margin:0, fontSize:13, color:"var(--text-secondary)", maxWidth:420, lineHeight:1.5 },
+  welcomeBtn:     { background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"10px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:800, fontFamily:"var(--font)" },
+  welcomeBtnOutline:{ background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"10px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)", fontWeight:600 },
+  quickTips:      { display:"flex", flexDirection:"column", gap:8, marginTop:12, width:"100%", maxWidth:380 },
+  quickTip:       { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", fontSize:12, color:"var(--text-secondary)", textAlign:"left", fontWeight:500 },
   // All-time banner
-  allTimeBanner:  { background:"linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%)", border:"1px solid var(--border)", borderRadius:16, padding:"18px 20px" },
-  allTimeHeader:  { display:"flex", alignItems:"center", gap:8, marginBottom:14 },
-  allTimeGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:8 },
-  allTimeStat:    { background:"var(--bg-input)", borderRadius:10, padding:"10px 12px", textAlign:"center", transition:"all 0.2s" },
+  allTimeBanner:  { background:"linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", border:"1px solid var(--border)", borderRadius:16, padding:"16px", backdropFilter:"blur(12px)" },
+  allTimeHeader:  { display:"flex", alignItems:"center", gap:8, marginBottom:12 },
+  allTimeGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))", gap:10 },
+  allTimeStat:    { background:"var(--bg-input)", borderRadius:14, padding:"12px 8px", textAlign:"center", border:"1px solid var(--border-light)" },
   // Budget card
-  budgetCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px" },
+  budgetCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"18px 20px", backdropFilter:"blur(12px)" },
   budgetTop:      { display:"flex", justifyContent:"space-between", marginBottom:14 },
-  budgetLabel:    { margin:"0 0 2px", fontSize:11, color:"var(--text-muted)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" },
-  budgetValue:    { margin:0, fontSize:20, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
-  progressTrack:  { height:10, background:"var(--border)", borderRadius:6, overflow:"hidden", marginBottom:10 },
-  budgetFooter:   { display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:4 },
-  statsRow:       { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10 },
-  statCard:       { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, padding:"14px 14px", display:"flex", flexDirection:"column", gap:4 },
-  statValue:      { margin:0, fontSize:17, fontWeight:800, letterSpacing:"-0.5px" },
-  statLabel:      { margin:0, fontSize:11, color:"var(--text-muted)", fontWeight:500 },
-  cardHeader:     { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 },
-  smallBtn:       { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", fontSize:10, fontWeight:600, padding:"4px 10px", borderRadius:6, cursor:"pointer" },
-  goalsList:      { display:"flex", flexDirection:"column", gap:12 },
+  budgetLabel:    { margin:"0 0 4px", fontSize:11, color:"var(--text-muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em" },
+  budgetValue:    { margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.5px" },
+  progressTrack:  { height:10, background:"var(--border)", borderRadius:8, overflow:"hidden", marginBottom:12 },
+  budgetFooter:   { display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:6 },
+  statsRow:       { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:12 },
+  statCard:       { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"14px", display:"flex", flexDirection:"column", gap:6, backdropFilter:"blur(12px)" },
+  statValue:      { margin:0, fontSize:18, fontWeight:900, letterSpacing:"-0.5px" },
+  statLabel:      { margin:0, fontSize:11, color:"var(--text-muted)", fontWeight:600 },
+  cardHeader:     { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 },
+  smallBtn:       { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", fontSize:11, fontWeight:700, padding:"4px 10px", borderRadius:6, cursor:"pointer" },
+  goalsList:      { display:"flex", flexDirection:"column", gap:10 },
   goalItem:       { },
   goalTop:        { display:"flex", alignItems:"center", gap:8, marginBottom:4 },
-  goalName:       { flex:1, fontSize:13, fontWeight:600, color:"var(--text-primary)" },
-  goalPct:        { fontSize:12, fontWeight:700, color:"var(--accent)" },
-  progressBarBg:  { height:6, background:"var(--border)", borderRadius:3, overflow:"hidden" },
-  progressBar:    { height:"100%", borderRadius:3 },
-  goalSub:        { margin:"4px 0 0", fontSize:10, color:"var(--text-muted)" },
+  goalName:       { flex:1, fontSize:13, fontWeight:700, color:"var(--text-primary)" },
+  goalPct:        { fontSize:12, fontWeight:800, color:"var(--accent)" },
+  progressBarBg:  { height:6, background:"var(--border)", borderRadius:4, overflow:"hidden" },
+  progressBar:    { height:"100%", borderRadius:4 },
+  goalSub:        { margin:"4px 0 0", fontSize:10, color:"var(--text-muted)", fontWeight:500 },
   subsList:       { display:"flex", flexDirection:"column", gap:10 },
-  subItem:        { display:"flex", alignItems:"center", gap:10, padding:"8px", background:"var(--bg-input)", borderRadius:10 },
+  subItem:        { display:"flex", alignItems:"center", gap:10, padding:"8px", background:"var(--bg-input)", borderRadius:10, border:"1px solid var(--border-light)" },
   subIcon:        { width:32, height:32, background:"var(--bg-elevated)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 },
-  subName:        { margin:0, fontSize:12, fontWeight:700, color:"var(--text-primary)" },
-  subDetail:      { margin:0, fontSize:10, color:"var(--text-muted)" },
-  subStatus:      { margin:0, fontSize:10, fontWeight:700 },
-  subDate:        { margin:0, fontSize:9, color:"var(--text-muted)" },
-  emptyStateSmall:{ textAlign:"center", padding:"20px 0", fontSize:12, color:"var(--text-muted)", fontStyle:"italic" },
-  chartsGrid:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:16, marginBottom:20 },
-  overviewCard:   { padding:18, background:"var(--bg-card)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"var(--shadow-sm)" },
-  chartCard:      { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"16px 18px" },
-  chartTitle:     { margin:"0 0 12px", fontSize:14, fontWeight:700, color:"var(--text-primary)" },
-  legend:         { display:"flex", flexDirection:"column", gap:6, marginTop:10 },
-  legendItem:     { display:"flex", alignItems:"center", gap:7 },
+  subName:        { margin:0, fontSize:13, fontWeight:800, color:"var(--text-primary)" },
+  subDetail:      { margin:0, fontSize:10, color:"var(--text-muted)", fontWeight:500 },
+  subStatus:      { margin:0, fontSize:10, fontWeight:800 },
+  subDate:        { margin:0, fontSize:9, color:"var(--text-muted)", fontWeight:500 },
+  emptyStateSmall:{ textAlign:"center", padding:"16px 0", fontSize:12, color:"var(--text-muted)", fontStyle:"italic" },
+  chartsGrid:     { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:12, marginBottom:16 },
+  overviewCard:   { padding:16, background:"var(--bg-card)", borderRadius:16, border:"1px solid var(--border)", backdropFilter:"blur(12px)" },
+  chartCard:      { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"16px", backdropFilter:"blur(12px)" },
+  chartTitle:     { margin:"0 0 12px", fontSize:14, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
+  legend:         { display:"flex", flexDirection:"column", gap:4, marginTop:10 },
+  legendItem:     { display:"flex", alignItems:"center", gap:6 },
   recentRow:      { display:"flex", alignItems:"center", gap:10, padding:"10px 0", borderBottom:"1px solid var(--border-light)" },
-  recentIcon:     { width:38, height:38, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
-  recentNote:     { margin:0, fontSize:13, color:"var(--text-primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  recentMeta:     { margin:"2px 0 0", fontSize:11, color:"var(--text-muted)" },
-  recentAmt:      { fontSize:13, color:"var(--red)", fontWeight:700, whiteSpace:"nowrap", flexShrink:0 },
-  viewAllBtn:     { background:"transparent", border:"none", color:"var(--accent)", fontSize:12, cursor:"pointer", fontWeight:600, fontFamily:"var(--font)" },
+  recentIcon:     { width:36, height:36, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:16 },
+  recentNote:     { margin:0, fontSize:13, color:"var(--text-primary)", fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  recentMeta:     { margin:"2px 0 0", fontSize:11, color:"var(--text-muted)", fontWeight:500 },
+  recentAmt:      { fontSize:14, color:"var(--red)", fontWeight:800, whiteSpace:"nowrap", flexShrink:0, letterSpacing:"-0.5px" },
+  viewAllBtn:     { background:"transparent", border:"none", color:"var(--accent)", fontSize:12, cursor:"pointer", fontWeight:700, fontFamily:"var(--font)" },
   alertBanner: {
-    background: "linear-gradient(135deg, #f59e0b, #f97316)",
+    background: "linear-gradient(135deg, #f5b800, #ffd04a)",
     borderRadius: 14,
-    padding: "14px 20px",
-    marginBottom: 20,
+    padding: "12px 16px",
+    marginBottom: 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     cursor: "pointer",
-    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)",
+    boxShadow: "0 8px 20px -5px rgba(245, 158, 11, 0.4)",
     border: "1px solid rgba(255, 255, 255, 0.2)",
   }
 };

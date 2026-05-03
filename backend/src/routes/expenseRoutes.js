@@ -4,6 +4,7 @@ import {
   addExpense,
   getExpenses,
   deleteExpense,
+  clearAllExpenses,
   updateExpense,
   getExpenseStats
 } from '../controllers/expenseController.js';
@@ -15,5 +16,6 @@ router.post('/', verifyToken, expenseValidation, validateRequest, addExpense);
 router.get('/', verifyToken, getExpenses);
 router.get('/stats', verifyToken, getExpenseStats);
 router.put('/:id', verifyToken, expenseValidation, validateRequest, updateExpense);
+router.delete('/', verifyToken, clearAllExpenses);
 router.delete('/:id', verifyToken, deleteExpense);
 export default router;

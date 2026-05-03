@@ -45,7 +45,7 @@ function ProgressRing({ pct, size = 80, stroke = 6, color }) {
 }
 
 export default function SavingsGoals({ setActiveTab }) {
-  const { token, pushToast, pushNotification, playJingle, triggerHaptic, isLoading: appLoading, addExpense, goals, setGoals, refreshGoals } = useApp();
+  const { token, pushToast, pushNotification, playJingle, triggerHaptic, isLoading: appLoading, addExpense, expenses, goals, setGoals, refreshGoals } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [addingTo, setAddingTo] = useState(null);
   const [addAmount, setAddAmount] = useState("");
@@ -120,6 +120,7 @@ export default function SavingsGoals({ setActiveTab }) {
   const totalSaved = goals.reduce((s, g) => s + (g.savedAmount || 0), 0);
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0);
   const completedCount = goals.filter(g => g.isCompleted).length;
+  const savingsHistory = (expenses || []).filter(e => e.description?.startsWith("Savings for: ")).slice(0, 15);
 
   if (appLoading) {
     return (
@@ -345,32 +346,59 @@ export default function SavingsGoals({ setActiveTab }) {
           })}
         </div>
       )}
+
+      {/* Savings Transaction History */}
+      {savingsHistory.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>💰 Savings History</h3>
+          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
+            {savingsHistory.slice(0, 10).map((exp, i) => (
+              <motion.div 
+                key={exp.id || i} 
+                initial={{ opacity:0, x:-5 }} animate={{ opacity:1, x:0 }} transition={{ delay: i*0.05 }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < savingsHistory.length - 1 ? "1px solid var(--border-light)" : "none", background: "rgba(255,255,255,0.02)" }}
+                whileHover={{ background: "rgba(255,255,255,0.05)" }}
+              >
+                <div style={{ width:32, height:32, borderRadius:8, background:"var(--accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>🎯</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{exp.description.replace("Savings for: ", "")}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontWeight:500 }}>{new Date(exp.date).toLocaleDateString('en-PK', { month:'short', day:'numeric' })}</p>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: "var(--green)" }}>+{formatPKR(exp.amount)}</span>
+                  <p style={{ margin:0, fontSize:10, color:"var(--text-muted)", fontWeight:700 }}>SAVED</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const S = {
-  container: { padding: 18, maxWidth: 900, margin: "0 auto" },
-  summaryRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 },
-  summaryCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 },
-  summaryValue: { margin: 0, fontSize: 18, fontWeight: 800, color: "var(--text-primary)" },
-  summaryLabel: { margin: 0, fontSize: 11, color: "var(--text-muted)", fontWeight: 500 },
-  backCircle: { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "var(--accent)", border: "none", color: "#111", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", marginBottom: 20 },
-  formCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px", marginBottom: 20, overflow: "hidden" },
-  formTitle: { margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 },
+  container: { padding: "20px 16px", maxWidth: 900, margin: "0 auto" },
+  summaryRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 },
+  summaryCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, backdropFilter: "blur(12px)" },
+  summaryValue: { margin: 0, fontSize: 20, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.5px" },
+  summaryLabel: { margin: "4px 0 0", fontSize: 12, color: "var(--text-muted)", fontWeight: 600 },
+  backCircle: { width: 38, height: 38, borderRadius: "50%", background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backdropFilter: "blur(12px)" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", background: "linear-gradient(135deg, var(--accent), #f97316)", border: "none", color: "#111", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", marginBottom: 20, boxShadow: "0 4px 14px rgba(245,158,11,0.3)" },
+  formCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: "24px", marginBottom: 20, overflow: "hidden", backdropFilter: "blur(12px)" },
+  formTitle: { margin: "0 0 16px", fontSize: 16, fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, letterSpacing: "-0.5px" },
   formGrid: { display: "flex", flexDirection: "column", gap: 14 },
-  label: { display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 },
-  input: { width: "100%", padding: "10px 14px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text-primary)", fontSize: 13, fontFamily: "var(--font)", outline: "none" },
-  catBtn: { padding: "6px 12px", background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 8, color: "var(--text-muted)", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s" },
-  catBtnActive: { background: "var(--accent-subtle)", borderColor: "var(--accent)", color: "var(--accent)" },
-  iconPickBtn: { width: 36, height: 36, background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 8, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
-  saveBtn: { width: "100%", marginTop: 16, padding: "12px", background: "var(--accent)", border: "none", color: "#111", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" },
+  label: { display: "block", fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 },
+  input: { width: "100%", padding: "12px 14px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text-primary)", fontSize: 14, fontFamily: "var(--font)", outline: "none" },
+  catBtn: { padding: "8px 14px", background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 10, color: "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)", transition: "all 0.2s" },
+  catBtnActive: { background: "var(--accent-subtle)", borderColor: "var(--accent)", color: "var(--accent)", fontWeight: 700 },
+  iconPickBtn: { width: 40, height: 40, background: "var(--bg-input)", border: "2px solid var(--border)", borderRadius: 10, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" },
+  saveBtn: { width: "100%", marginTop: 20, padding: "14px", background: "linear-gradient(135deg, var(--accent), #f97316)", border: "none", color: "#111", borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font)", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" },
   goalsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 },
-  goalCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 16, padding: "18px" },
-  deleteBtn: { background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 4 },
-  suggestion: { display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "var(--accent-subtle)", borderRadius: 8, fontSize: 11, color: "var(--accent)", fontWeight: 600 },
-  addSavingsBtn: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 10, color: "var(--text-primary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)" },
-  confirmBtn: { padding: "10px 16px", background: "var(--green)", border: "none", color: "#111", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" },
-  cancelBtn: { padding: "10px 12px", background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)" },
+  goalCard: { background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 20, padding: "20px", backdropFilter: "blur(12px)" },
+  deleteBtn: { background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 6 },
+  suggestion: { display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "var(--accent-subtle)", borderRadius: 10, fontSize: 11, color: "var(--accent)", fontWeight: 700 },
+  addSavingsBtn: { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px", background: "var(--bg-input)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text-primary)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font)", transition: "background 0.2s" },
+  confirmBtn: { padding: "10px 16px", background: "var(--green)", border: "none", color: "#111", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font)" },
+  cancelBtn: { padding: "10px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font)" },
 };

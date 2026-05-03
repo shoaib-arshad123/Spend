@@ -4,21 +4,44 @@ import { generateId, getAutoCategory } from "../utils/helpers";
 import { useApp } from "../context/AppContext";
 
 const STORES = ["Al-Fatah Supermart","Imtiaz Supermarket","Metro C&C","Canteen","Utility Store","Gourmet Bakery","CSD Store","Local Pharmacy"];
-const CATS   = ["food","transport","books","health","entertainment","clothing","other"];
-const C_ICONS= { food:"🍔", transport:"🚌", books:"📚", health:"💊", entertainment:"🎮", clothing:"👕", other:"📦" };
+const CATS   = ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"];
+const C_ICONS= { 
+  "Food & Dining":"🍔", 
+  "Transportation":"🚌", 
+  "Education":"📚", 
+  "Health & Fitness":"💊", 
+  "Entertainment":"🎮", 
+  "Shopping":"🛍️", 
+  "Bills & Utilities":"💡", 
+  "Travel":"✈️", 
+  "Other":"📦" 
+};
 
 function simulateOCR(filename) {
-  const l = filename.toLowerCase();
-  let category = getAutoCategory();
-  if (l.includes("food")||l.includes("canteen")||l.includes("rest")) category="food";
-  else if (l.includes("book")||l.includes("stat")) category="books";
-  else if (l.includes("med")||l.includes("pharm")) category="health";
-  else if (l.includes("bus")||l.includes("trans")) category="transport";
+  const l = (filename || "").toLowerCase();
+  const store = STORES[Math.floor(Math.random() * STORES.length)];
+  const storeLower = store.toLowerCase();
+  
+  let category = "Other";
+  
+  // Detection logic based on store name or filename
+  if (storeLower.includes("mart") || storeLower.includes("market") || storeLower.includes("store") || storeLower.includes("bakery") || storeLower.includes("canteen") || l.includes("food") || l.includes("rest")) {
+    category = "Food & Dining";
+  } else if (storeLower.includes("pharmacy") || l.includes("med") || l.includes("health")) {
+    category = "Health & Fitness";
+  } else if (l.includes("bus") || l.includes("ride") || l.includes("travel") || l.includes("petrol") || l.includes("fuel")) {
+    category = "Transportation";
+  } else if (l.includes("book") || l.includes("study") || l.includes("stat")) {
+    category = "Education";
+  } else if (l.includes("clothes") || l.includes("mall") || l.includes("shirt")) {
+    category = "Shopping";
+  }
+
   return {
-    amount: Math.floor(Math.random()*1800)+80,
+    amount: Math.floor(Math.random() * 1800) + 80,
     category,
-    store: STORES[Math.floor(Math.random()*STORES.length)],
-    confidence: Math.floor(Math.random()*15)+85,
+    store,
+    confidence: Math.floor(Math.random() * 15) + 85,
   };
 }
 
@@ -28,7 +51,7 @@ export default function BillScanner({ onClose }) {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("food");
+  const [category, setCategory] = useState("Food & Dining");
   const [note, setNote] = useState("");
   const fileRef = useRef(null);
   const camRef  = useRef(null);
@@ -164,6 +187,6 @@ const BS = {
   input:        { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:8, padding:"10px 12px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" },
   catBtn:       { padding:"5px 10px", background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:6, cursor:"pointer", fontSize:12, color:"var(--text-secondary)", fontFamily:"var(--font)" },
   catActive:    { background:"var(--accent-subtle)", border:"1px solid var(--accent)", color:"var(--accent)" },
-  confirmBtn:   { width:"100%", background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"12px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, marginBottom:8, fontFamily:"var(--font)" },
+  confirmBtn:   { width:"100%", background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"12px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, marginBottom:8, fontFamily:"var(--font)" },
   retryBtn:     { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"10px", borderRadius:10, cursor:"pointer", fontSize:13, fontFamily:"var(--font)" },
 };

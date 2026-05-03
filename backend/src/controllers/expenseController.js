@@ -116,6 +116,35 @@ export const deleteExpense = async (req, res) => {
   }
 };
 
+export const clearAllExpenses = async (req, res) => {
+  try {
+    const { type, month } = req.query; // type: 'regular', 'goal', 'subscription'; month: 'YYYY-MM'
+    let query = 'UPDATE expenses SET isHidden = 1 WHERE userId = @userId';
+    
+    if (type === 'regular') {
+      query += " AND description NOT LIKE 'Savings for: %' AND description NOT LIKE 'Bill Paid: %'";
+    } else if (type === 'goal') {
+      query += " AND description LIKE 'Savings for: %'";
+    } else if (type === 'subscription') {
+      query += " AND description LIKE 'Bill Paid: %'";
+    }
+
+    if (month) {
+      query += " AND LEFT(CONVERT(VARCHAR, date, 120), 7) = @month";
+    }
+
+    await pool.request()
+      .input('userId', req.userId)
+      .input('month', month || null)
+      .query(query);
+      
+    res.json({ success: true, message: `History (${type || 'all'}) ${month ? 'for ' + month : ''} hidden` });
+  } catch (error) {
+    console.error('Clear expenses error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 export const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;

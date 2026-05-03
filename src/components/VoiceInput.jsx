@@ -2,25 +2,42 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CAT_KEYWORDS = {
-  food:["food","eat","lunch","dinner","breakfast","canteen","restaurant","chai","khana","snack","biryani","roti","pizza","burger","shawarma"],
-  transport:["transport","bus","rickshaw","uber","taxi","fare","travel","petrol","fuel","ride","auto"],
-  books:["book","books","stationery","pen","pencil","copies","notebook","library","study","notes"],
-  health:["medicine","medical","health","doctor","pharmacy","hospital","tablet","paracetamol","treatment","clinic"],
-  entertainment:["entertainment","game","movie","cinema","fun","outing","mobile","internet","recharge","top-up","netflix"],
-  clothing:["clothes","clothing","shirt","shoes","dress","jeans","socks","belt","fashion","kurta"],
+  "Food & Dining": ["food", "eat", "lunch", "dinner", "breakfast", "canteen", "restaurant", "chai", "khana", "snack", "biryani", "roti", "pizza", "burger", "shawarma", "kfc", "mcdonald", "samosa", "tea", "coffee", "milk", "grocery", "fruit", "vegetable"],
+  "Transportation": ["transport", "bus", "rickshaw", "uber", "taxi", "fare", "travel", "petrol", "fuel", "ride", "auto", "bike", "car", "indriver", "bykea", "train", "metro"],
+  "Education": ["book", "books", "stationery", "pen", "pencil", "copies", "notebook", "library", "study", "notes", "fee", "tuition", "course", "exam", "university", "college", "school"],
+  "Health & Fitness": ["medicine", "medical", "health", "doctor", "pharmacy", "hospital", "tablet", "paracetamol", "treatment", "clinic", "gym", "fitness", "vitamin", "dentist"],
+  "Entertainment": ["entertainment", "game", "movie", "cinema", "fun", "outing", "mobile", "internet", "recharge", "top-up", "netflix", "youtube", "pubg", "gaming", "data", "wifi"],
+  "Shopping": ["clothes", "clothing", "shirt", "shoes", "dress", "jeans", "socks", "belt", "fashion", "kurta", "mall", "shopping", "bag", "watch", "makeup"],
+  "Bills & Utilities": ["bill", "electricity", "water", "gas", "utility", "rent", "maintenance", "wapda", "ptcl", "internet bill"],
+  "Travel": ["hotel", "flight", "trip", "vacation", "tour", "ticket", "northern", "tourism"],
 };
 
 function detectCat(text) {
   const lower = text.toLowerCase();
   for (const [cat, kws] of Object.entries(CAT_KEYWORDS)) {
-    if (kws.some(k => lower.includes(k))) return cat;
+    if (kws.some(k => lower.includes(k.toLowerCase()))) return cat;
   }
-  return "other";
+  return "Other";
 }
 
 function extractAmt(text) {
-  const pats = [/(\d+)\s*rupees?/i,/pkr\s*(\d+)/i,/spent\s+(\d+)/i,/add\s+(\d+)/i,/(\d{2,5})/];
-  for (const p of pats) { const m = text.match(p); if (m) return parseInt(m[1]); }
+  // Try to find numbers followed by currency or just numbers in context
+  const pats = [
+    /(\d+)\s*(rupees?|pkr|rs)/i,
+    /(rupees?|pkr|rs)\s*(\d+)/i,
+    /spent\s+(\d+)/i,
+    /add\s+(\d+)/i,
+    /for\s+(\d+)/i,
+    /(\d{2,6})/ // Catch any 2-6 digit number as a fallback
+  ];
+  for (const p of pats) { 
+    const m = text.match(p); 
+    if (m) {
+      // Return the group that contains the digits
+      const val = m[1].match(/\d/) ? m[1] : m[2];
+      return parseInt(val);
+    } 
+  }
   return null;
 }
 

@@ -6,8 +6,8 @@ import { categoryAPI } from "../services/api.js";
 import { User as UserIcon, Edit3, Wallet, Settings, LogOut, DownloadCloud, Camera, Palette, DollarSign, CalendarDays, Zap, FileText, Trophy, Plus, Layout, ChevronLeft, ShieldCheck, Mail, Phone, Lock } from "lucide-react";
 
 const AVATARS = ["🧑‍💻","👨‍🎓","👩‍🎓","🧑‍🎓","👦","👧","🧑","🧑‍💼","🧑‍🔬","🧑‍🎨","🧕","🧔"];
-const CAT_ICONS = { food:"🍔", transport:"🚌", books:"📚", health:"💊", entertainment:"🎮", clothing:"👕", other:"📦" };
-const CAT_COLORS= { food:"#f59e0b", transport:"#3b82f6", books:"#8b5cf6", health:"#10b981", entertainment:"#ec4899", clothing:"#f97316", other:"#6b7280" };
+const CAT_ICONS = { "Food & Dining":"🍔", "Transportation":"🚌", "Education":"📚", "Health & Fitness":"💊", "Entertainment":"🎮", "Shopping":"🛍️", "Bills & Utilities":"💡", "Travel":"✈️", "Other":"📦" };
+const CAT_COLORS= { "Food & Dining":"#f5b800", "Transportation":"#3b82f6", "Education":"#8b5cf6", "Health & Fitness":"#10b981", "Entertainment":"#ec4899", "Shopping":"#f97316", "Bills & Utilities":"#6366f1", "Travel":"#06b6d4", "Other":"#6b7280" };
 const PRESETS   = [5000,8000,10000,12000,15000,20000,25000,30000];
 
 function streakCount(expenses) {
@@ -38,12 +38,13 @@ const Field = ({ label, children }) => (
 );
 
 export default function Profile({ setActiveTab }) {
-  const { user, updateProfile, logout, expenses, addExpense, budget, setBudget, theme, toggleTheme, accent, setAccent, categories, addCategory, allTimeTotal, allTimeBudget, monthlySpent, effectiveMonthlyBudget, monthlyRemaining } = useApp();
+  const { user, updateProfile, logout, expenses, addExpense, budget, setBudget, theme, toggleTheme, accent, setAccent, categories, addCategory, allTimeTotal, allTimeBudget, monthlySpent, effectiveMonthlyBudget, monthlyRemaining, requestNotificationPermission } = useApp();
   const [section, setSection] = useState("overview"); // overview | edit | budget | danger | categories
   const [editForm, setEditForm] = useState({ name:user?.name||"", avatar:user?.avatar||"🧑‍💻", photo:user?.photo||null });
   const [budgetInput, setBudgetInput] = useState(String(budget||""));
   const [newCategory, setNewCategory] = useState({ name:"", icon:"📦" });
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState("");
   
   // Security states
   const { sendOTP, verifyOTP, changePassword } = useApp();
@@ -125,8 +126,8 @@ export default function Profile({ setActiveTab }) {
 
   return (
     <div style={P.root}>
-      {/* Header with Back */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+      {/* Header - aligned */}
+      <div style={{ display:"flex", alignItems:"center", gap:14 }}>
         <motion.button 
           style={P.backCircle} 
           onClick={() => setActiveTab("dashboard")}
@@ -135,12 +136,12 @@ export default function Profile({ setActiveTab }) {
         >
           <ChevronLeft size={20} color="var(--text-secondary)" />
         </motion.button>
-        <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)" }}>Profile</h2>
+        <h2 style={{ margin:0, fontSize:22, fontWeight:800, color:"var(--text-primary)" }}>My Profile</h2>
       </div>
 
-      {/* Profile hero card */}
+      {/* Profile hero card - centered vertical */}
       <div style={P.heroCard}>
-        <div style={P.heroLeft}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12, width:"100%" }}>
           <div 
             style={{ ...P.avatarWrap, cursor: "pointer" }} 
             onClick={() => setSection("edit")}
@@ -153,24 +154,24 @@ export default function Profile({ setActiveTab }) {
             )}
             <motion.div style={P.avatarOverlay} whileHover={{ opacity: 1 }}><Camera size={20} /></motion.div>
           </div>
-          <div>
+          <div style={{ textAlign:"center" }}>
             <h2 style={P.userName}>{user?.name}</h2>
             <p style={P.userEmail}>{user?.email}</p>
             {user?.university && <p style={P.userMeta}>{user.university} · {user.major || "Student"}</p>}
             <p style={P.userJoin}>Member since {joinDate}</p>
           </div>
-        </div>
-        <div style={{ ...P.typeBadge, background:tc.bg, border:`1px solid ${tc.color}40` }}>
-          <span style={{ color:tc.color, fontWeight:700, fontSize:13 }}>{tc.label}</span>
-          <span style={{ color:"var(--text-muted)", fontSize:11 }}>{tc.desc}</span>
+          <div style={{ ...P.typeBadge, background:tc.bg, border:`1px solid ${tc.color}40`, textAlign:"center", width:"100%", maxWidth:320 }}>
+            <span style={{ color:tc.color, fontWeight:700, fontSize:13 }}>{tc.label}</span>
+            <span style={{ color:"var(--text-muted)", fontSize:11 }}>{tc.desc}</span>
+          </div>
         </div>
       </div>
 
-      {/* Tab navigation */}
+      {/* Tab navigation - pill style, scrollable */}
       <div style={P.tabs}>
         {SECTIONS.map(s => (
-          <motion.button key={s.key} style={{ ...P.tab, ...(section===s.key ? P.tabActive : {}) }} onClick={() => setSection(s.key)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <span>{s.icon}</span><span style={{ fontSize:13 }}>{s.label}</span>
+          <motion.button key={s.key} style={{ ...P.tab, ...(section===s.key ? P.tabActive : {}) }} onClick={() => setSection(s.key)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <span>{s.icon}</span><span>{s.label}</span>
           </motion.button>
         ))}
       </div>
@@ -223,7 +224,7 @@ export default function Profile({ setActiveTab }) {
                     </div>
                     <div style={{ height:10, background:"var(--border)", borderRadius:5 }}>
                       <motion.div
-                        style={{ height:"100%", borderRadius:5, background: pct>=100?"var(--red)":pct>=80?"#f59e0b":"var(--green)" }}
+                        style={{ height:"100%", borderRadius:5, background: pct>=100?"var(--red)":pct>=80?"#f5b800":"var(--green)" }}
                         initial={{ width:0 }}
                         animate={{ width:`${Math.min(pct,100)}%` }}
                         transition={{ duration:1 }}
@@ -242,11 +243,11 @@ export default function Profile({ setActiveTab }) {
                 <h3 style={P.cardTitle}>Top Spending Categories</h3>
                 {topCategories.length === 0 ? (
                   <p style={P.empty}>No expenses yet. Start tracking!</p>
-                ) : topCategories.map(([catName, amt], i) => {
+                ) : topCategories.filter(Boolean).map(([catName, amt], i) => {
                   const pctCat = allTimeTotal > 0 ? Math.round((amt/allTimeTotal)*100) : 0;
-                  const categoryInfo = categories.find(c => c.name === catName) || { icon: '📦' };
+                  const categoryInfo = categories?.find(c => c?.name === catName) || { icon: '📦' };
                   return (
-                    <div key={catName} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                    <div key={catName || i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
                       <span style={{ fontSize:16, width:24 }}>{categoryInfo.icon}</span>
                       <div style={{ flex:1 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
@@ -423,10 +424,10 @@ export default function Profile({ setActiveTab }) {
               <div style={{ marginTop:28, borderTop:"1px solid var(--border)", paddingTop:20 }}>
                 <h4 style={{ margin:"0 0 12px", fontSize:14, fontWeight:700, color:"var(--text-primary)" }}>Existing Categories</h4>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(100px, 1fr))", gap:10 }}>
-                  {categories.map(cat => (
-                    <div key={cat.id} style={{ background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:8, padding:12, textAlign:"center" }}>
+                  {Array.isArray(categories) && categories.filter(Boolean).map(cat => (
+                    <div key={cat.id || cat.name || Math.random()} style={{ background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:8, padding:12, textAlign:"center" }}>
                       <div style={{ fontSize:24, marginBottom:6 }}>{cat.icon || '📦'}</div>
-                      <p style={{ margin:0, fontSize:12, color:"var(--text-secondary)", wordBreak:"break-word" }}>{cat.name}</p>
+                      <p style={{ margin:0, fontSize:12, color:"var(--text-secondary)", wordBreak:"break-word", textTransform:"capitalize" }}>{cat.name}</p>
                     </div>
                   ))}
                 </div>
@@ -625,7 +626,7 @@ export default function Profile({ setActiveTab }) {
                 <h4 style={{ fontSize:13, fontWeight:600, color:"var(--text-primary)", marginBottom:10 }}>Accent Color</h4>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(100px, 1fr))", gap:10 }}>
                   {[
-                    { id:"orange", name:"Dark Orange", hex:"#f59e0b" },
+                    { id:"orange", name:"Dark Orange", hex:"#f5b800" },
                     { id:"blue", name:"Midnight Blue", hex:"#3b82f6" },
                     { id:"emerald", name:"Emerald Green", hex:"#10b981" },
                     { id:"rose", name:"Rose Gold", hex:"#f43f5e" },
@@ -638,21 +639,30 @@ export default function Profile({ setActiveTab }) {
                   ))}
                 </div>
               </div>
+
+              <div style={{ marginTop: 24, padding: "16px", background: "var(--bg-input)", borderRadius: 12, border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div>
+                  <h4 style={{ margin: "0 0 4px", fontSize: 14, color: "var(--text-primary)" }}>Enable Browser Notifications</h4>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>Get alerts for big expenses, budget warnings, and badges.</p>
+                </div>
+                <motion.button 
+                  style={{ ...P.saveBtn, flex: "none", padding: "10px 16px", background: "var(--accent)", color: "#111" }}
+                  onClick={async () => {
+                    await requestNotificationPermission();
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Enable Notifications 🔔
+                </motion.button>
+              </div>
             </div>
           )}
 
           {/* ── DANGER/ACCOUNT ── */}
           {section==="danger" && (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-              <div style={P.card}>
-                <h3 style={P.cardTitle}>Sample Data</h3>
-                <p style={{ fontSize:13, color:"var(--text-secondary)", margin:"0 0 14px" }}>Load sample expenses to explore the app's features before adding your own data.</p>
-                <motion.button style={P.dangerBtn2} onClick={() => {
-                  if (expenses.length === 0) {
-                    SEED_EXPENSES.forEach(e => addExpense(e));
-                  }
-                }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><DownloadCloud size={16} style={{ marginRight:8 }} />Load Sample Expenses</motion.button>
-              </div>
+
               <div style={{ ...P.card, border:"1px solid var(--red)" }}>
                 <h3 style={{ ...P.cardTitle, color:"var(--red)" }}>Sign Out</h3>
                 <p style={{ fontSize:13, color:"var(--text-secondary)", margin:"0 0 14px" }}>You'll be signed out of your account on this device. Your data will be saved.</p>
@@ -667,41 +677,41 @@ export default function Profile({ setActiveTab }) {
 }
 
 const P = {
-  root:         { padding:20, display:"flex", flexDirection:"column", gap:14, maxWidth:720, margin:"0 auto" },
-  heroCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:20, padding:"28px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:20, flexWrap:"wrap", boxShadow:"var(--shadow-sm)" },
+  root:         { padding:"20px 16px", display:"flex", flexDirection:"column", gap:16, maxWidth:720, margin:"0 auto" },
+  heroCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:24, padding:"28px 24px", display:"flex", justifyContent:"center", alignItems:"center", boxShadow:"var(--shadow-sm)", backdropFilter:"blur(12px)" },
   heroLeft:     { display:"flex", alignItems:"center", gap:20 },
-  avatarWrap:   { width:84, height:84, borderRadius:"50%", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, flexShrink:0, border:"3px solid var(--bg-card)", boxShadow:"0 0 0 2px var(--border)", overflow:"hidden", position: "relative" },
+  avatarWrap:   { width:90, height:90, borderRadius:"50%", background:"var(--bg-elevated)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:44, flexShrink:0, border:"3px solid var(--accent)", boxShadow:"0 0 0 4px rgba(245,184,0,0.15)", overflow:"hidden", position: "relative" },
   avatarOverlay: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", opacity: 0, transition: "opacity 0.2s" },
-  userName:     { margin:0, fontSize:20, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.5px" },
-  userEmail:    { margin:"3px 0 2px", fontSize:13, color:"var(--text-muted)" },
-  userMeta:     { margin:"0 0 2px", fontSize:12, color:"var(--text-secondary)" },
-  userJoin:     { margin:0, fontSize:11, color:"var(--text-muted)" },
-  typeBadge:    { padding:"10px 16px", borderRadius:12, display:"flex", flexDirection:"column", gap:3, textAlign:"right", alignSelf:"flex-start" },
-  tabs:         { display:"flex", gap:8, borderBottom:"1px solid var(--border-light)", paddingBottom:4, overflowX:"auto" },
-  tab:          { display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"10px 16px", background:"transparent", border:"none", borderBottom:"2px solid transparent", color:"var(--text-muted)", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", fontFamily:"var(--font)", transition:"all 0.2s" },
-  tabActive:    { color:"var(--text-primary)", borderBottom:"2px solid var(--accent)" },
+  userName:     { margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.5px" },
+  userEmail:    { margin:"4px 0 2px", fontSize:13, color:"var(--text-muted)" },
+  userMeta:     { margin:"0 0 2px", fontSize:12, color:"var(--text-secondary)", fontWeight:500 },
+  userJoin:     { margin:"4px 0 0", fontSize:11, color:"var(--text-muted)" },
+  typeBadge:    { padding:"10px 16px", borderRadius:12, display:"flex", flexDirection:"column", gap:4, alignSelf:"center" },
+  tabs:         { display:"flex", gap:6, overflowX:"auto", paddingBottom:2, scrollbarWidth:"none" },
+  tab:          { display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"8px 14px", background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, color:"var(--text-muted)", cursor:"pointer", fontSize:12, fontWeight:600, whiteSpace:"nowrap", fontFamily:"var(--font)", transition:"all 0.2s" },
+  tabActive:    { color:"#111", background:"var(--accent)", borderColor:"var(--accent)", fontWeight:800 },
   grid:         { display:"flex", flexDirection:"column", gap:14 },
-  card:         { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px" },
-  cardTitle:    { margin:"0 0 16px", fontSize:15, fontWeight:700, color:"var(--text-primary)" },
+  card:         { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:20, padding:"20px 22px", backdropFilter:"blur(12px)" },
+  cardTitle:    { margin:"0 0 16px", fontSize:16, fontWeight:800, color:"var(--text-primary)", letterSpacing:"-0.3px" },
   statsGrid:    { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:10 },
-  statCard:     { background:"var(--bg-input)", borderRadius:10, padding:"12px 10px", textAlign:"center" },
-  statValue:    { margin:"6px 0 3px", fontSize:14, fontWeight:700 },
-  statLabel:    { margin:0, fontSize:10, color:"var(--text-muted)" },
-  setBudgetBtn: { background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"11px 24px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
+  statCard:     { background:"var(--bg-input)", borderRadius:14, padding:"14px 12px", textAlign:"center" },
+  statValue:    { margin:"6px 0 3px", fontSize:15, fontWeight:800 },
+  statLabel:    { margin:0, fontSize:10, color:"var(--text-muted)", fontWeight:600 },
+  setBudgetBtn: { background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"11px 24px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
   empty:        { color:"var(--text-muted)", fontSize:13, textAlign:"center", padding:"16px 0" },
-  themeToggle:  { background:"var(--bg-elevated)", border:"1px solid var(--border)", color:"var(--text-primary)", padding:"9px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:500, fontFamily:"var(--font)" },
+  themeToggle:  { background:"var(--bg-elevated)", border:"1px solid var(--border)", color:"var(--text-primary)", padding:"9px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:500, fontFamily:"var(--font)", backdropFilter:"blur(12px)" },
   fieldLabel:   { display:"block", fontSize:11, color:"var(--text-muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:8 },
-  input:        { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:10, padding:"11px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" },
+  input:        { width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", borderRadius:12, padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" },
   avatarBtn:    { width:38, height:38, borderRadius:10, background:"var(--bg-input)", border:"1px solid var(--border)", fontSize:20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" },
   avatarActive: { background:"var(--accent-subtle)", border:"1px solid var(--accent)" },
-  savedMsg:     { background:"var(--green-bg)", border:"1px solid var(--green)", color:"var(--green)", padding:"9px 12px", borderRadius:8, fontSize:13, marginBottom:12 },
-  cancelBtn:    { flex:1, background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"11px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)" },
-  saveBtn:      { flex:2, background:"linear-gradient(135deg,#f59e0b,#f97316)", border:"none", color:"#111", padding:"11px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
-  budgetInputRow:{ display:"flex", alignItems:"center", gap:8, background:"var(--bg-input)", border:"2px solid var(--accent-subtle)", borderRadius:12, padding:"12px 16px", marginBottom:20, transition:"border-color 0.2s" },
-  presetBtn:    { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontFamily:"var(--font)", transition:"all 0.2s" },
-  presetActive: { background:"var(--accent-subtle)", border:"1px solid var(--accent)", color:"var(--accent)", fontWeight:600 },
+  savedMsg:     { background:"var(--green-bg)", border:"1px solid var(--green)", color:"var(--green)", padding:"9px 12px", borderRadius:8, fontSize:13, fontWeight:600, marginBottom:12 },
+  cancelBtn:    { flex:1, background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"12px", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"var(--font)" },
+  saveBtn:      { flex:2, background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"12px", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
+  budgetInputRow:{ display:"flex", alignItems:"center", gap:8, background:"var(--bg-input)", border:"2px solid var(--accent-subtle)", borderRadius:14, padding:"12px 16px", marginBottom:20, transition:"border-color 0.2s" },
+  presetBtn:    { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"8px 14px", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"var(--font)", transition:"all 0.2s" },
+  presetActive: { background:"var(--accent-subtle)", border:"1px solid var(--accent)", color:"var(--accent)", fontWeight:700 },
   dangerBtn:    { width:"100%", padding:"12px", background:"var(--red-bg)", border:"1px solid var(--red)", color:"var(--red)", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:700, fontFamily:"var(--font)" },
-  backCircle:   { width:36, height:36, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
+  backCircle:   { width:40, height:40, borderRadius:"50%", background:"var(--bg-card)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", backdropFilter:"blur(12px)", flexShrink:0 },
   dangerBtn2:   { display:"flex", alignItems:"center", justifyContent:"center", background:"var(--blue-bg)", border:"1px solid var(--blue)", color:"var(--blue)", padding:"12px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:600, fontFamily:"var(--font)", transition:"background 0.2s" },
   emojiBtn:     { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"10px", fontSize:20, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" },
   
@@ -710,7 +720,7 @@ const P = {
   secHeader:    { display:"flex", alignItems:"center", gap:8, fontSize:13, fontWeight:700, color:"var(--text-primary)", borderBottom:"1px solid var(--border-light)", paddingBottom:10 },
   secItem:      { display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 },
   secLabel:     { margin:0, fontSize:11, fontWeight:600, color:"var(--text-muted)", textTransform:"uppercase" },
-  secVal:       { margin:0, fontSize:13, color:"var(--text-secondary)" },
+  secVal:       { margin:0, fontSize:13, color:"var(--text-secondary)", fontWeight:500 },
   verifyBtn:    { background:"var(--accent)", color:"#111", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer" },
   verifiedBadge:{ background:"var(--green-bg)", color:"var(--green)", border:"1px solid var(--green)", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700 },
   secActionBtn: { background:"var(--bg-card)", border:"1px solid var(--border)", color:"var(--text-secondary)", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" },
