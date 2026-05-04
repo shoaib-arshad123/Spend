@@ -238,7 +238,6 @@ export function AppProvider({ children }) {
     const n = { ...notif, id: Date.now(), createdAt: now, time: now, read: false, isRead: false };
 
     setNotifications(prev => [n, ...prev].slice(0, 60));
-    setUnreadCount(prev => prev + 1);
     playNotificationSound();
     triggerHaptic(notif.type || "success");
 
@@ -320,10 +319,24 @@ export function AppProvider({ children }) {
         const today = getLocalDateKey();
         const lastGoalNotif = localStorage.getItem("last_notified_goals");
         if (mappedGoals.length > 0 && lastGoalNotif !== today) {
-          const stagnant = mappedGoals.filter(g => (g.savedAmount || 0) === 0);
-          if (stagnant.length > 0) {
-            localStorage.setItem("last_notified_goals", today);
-            pushNotification({ title: "Saving Reminder 🎯", message: `You have ${stagnant.length} goals with no progress.`, type: "info", icon: "💰" });
+          const activeGoals = mappedGoals.filter(g => !g.isCompleted);
+          if (activeGoals.length > 0) {
+            const urgent = activeGoals.filter(g => {
+              if (!g.deadline) return false;
+              const daysLeft = Math.ceil((new Date(g.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+              return daysLeft > 0 && daysLeft <= 7 && g.savedAmount < g.targetAmount;
+            });
+
+            if (urgent.length > 0) {
+              localStorage.setItem("last_notified_goals", today);
+              pushNotification({ title: "Goal Deadline Approaching ⏳", message: `You have ${urgent.length} goal(s) due within a week. Keep saving!`, type: "warning", icon: "🎯" });
+            } else {
+              const stagnant = activeGoals.filter(g => (g.savedAmount || 0) === 0);
+              if (stagnant.length > 0) {
+                localStorage.setItem("last_notified_goals", today);
+                pushNotification({ title: "Start Saving 🎯", message: `You have ${stagnant.length} goals with no progress. Make your first contribution!`, type: "info", icon: "💰" });
+              }
+            }
           }
         }
       } else if (data.message === 'Invalid token') {
@@ -483,7 +496,7 @@ export function AppProvider({ children }) {
   const addExpense = useCallback(async (exp, customNotification = null) => {
     if (!user) {
       pushToast({ type: "danger", message: "You must be signed in to add expenses." });
-      return false;
+      return { success: false, message: "You must be signed in." };
     }
 
     const currentMonth = new Date().getMonth();
@@ -515,27 +528,45 @@ export function AppProvider({ children }) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
         return { success: false, message: data.message || "Failed to save expense" };
       }
+
+      // Expense saved successfully - update local state immediately
       setExpenses(prev => [{ ...exp, id: data.expense?.id || Date.now(), amount: Number(exp.amount) }, ...prev]);
-      refreshBudget();
-
-      if (Number(exp.amount) >= 5000) {
-        pushNotification({
-          title: "Large Spending Alert",
-          message: `A large transaction of PKR ${Number(exp.amount).toLocaleString()} was recorded.`,
-          type: "warning",
-          icon: "⚠️"
-        });
-      }
-
       pushToast({ type: "success", message: `✅ PKR ${Number(exp.amount).toLocaleString()} added!` });
-      if (customNotification) {
-        pushNotification(customNotification);
-      } else {
-        pushNotification({ title: "Expense Added", message: `PKR ${Number(exp.amount).toLocaleString()} saved successfully.`, type: "success", icon: "💸" });
-      }
+      playNotificationSound();
+      triggerHaptic("success");
+
+      // Push a permanent notification for the activity history
+      pushNotification({
+        title: "Expense Added",
+        message: `${exp.category}: PKR ${Number(exp.amount).toLocaleString()} - ${exp.description || 'No description'}`,
+        type: "success",
+        icon: "💸"
+      });
+
+      // Secondary calls (won't block or cause error on the main flow)
+      try { refreshBudget(); } catch (e) { console.warn("Budget refresh failed:", e); }
+
+      try {
+        if (Number(exp.amount) >= 5000) {
+          pushNotification({
+            title: "Large Spending Alert",
+            message: `A large transaction of PKR ${Number(exp.amount).toLocaleString()} was recorded.`,
+            type: "warning",
+            icon: "⚠️"
+          });
+        }
+
+        if (customNotification) {
+          pushNotification(customNotification);
+        } else {
+          pushNotification({ title: "Expense Added", message: `PKR ${Number(exp.amount).toLocaleString()} saved successfully.`, type: "success", icon: "💸" });
+        }
+      } catch (e) { console.warn("Notification push failed:", e); }
+
       return { success: true };
     } catch (err) {
-      pushToast({ type: "danger", message: "Failed to save expense" });
+      console.error("Expense save error:", err);
+      pushToast({ type: "danger", message: "Failed to save expense. Check your connection." });
       return { success: false, message: "Network error. Please try again." };
     }
   }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic]);
@@ -968,10 +999,24 @@ export function AppProvider({ children }) {
           const today = getLocalDateKey();
           const lastGoalNotif = localStorage.getItem("last_notified_goals");
           if (mappedGoals.length > 0 && lastGoalNotif !== today) {
-            const stagnant = mappedGoals.filter(g => (g.savedAmount || 0) === 0);
-            if (stagnant.length > 0) {
-              localStorage.setItem("last_notified_goals", today);
-              pushNotification({ title: "Saving Reminder 🎯", message: `You have ${stagnant.length} goals with no progress.`, type: "info", icon: "💰" });
+            const activeGoals = mappedGoals.filter(g => !g.isCompleted);
+            if (activeGoals.length > 0) {
+              const urgent = activeGoals.filter(g => {
+                if (!g.deadline) return false;
+                const daysLeft = Math.ceil((new Date(g.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+                return daysLeft > 0 && daysLeft <= 7 && g.savedAmount < g.targetAmount;
+              });
+
+              if (urgent.length > 0) {
+                localStorage.setItem("last_notified_goals", today);
+                pushNotification({ title: "Goal Deadline Approaching ⏳", message: `You have ${urgent.length} goal(s) due within a week. Keep saving!`, type: "warning", icon: "🎯" });
+              } else {
+                const stagnant = activeGoals.filter(g => (g.savedAmount || 0) === 0);
+                if (stagnant.length > 0) {
+                  localStorage.setItem("last_notified_goals", today);
+                  pushNotification({ title: "Start Saving 🎯", message: `You have ${stagnant.length} goals with no progress. Make your first contribution!`, type: "info", icon: "💰" });
+                }
+              }
             }
           }
         } else if (goalData.message === 'Invalid token') logout();

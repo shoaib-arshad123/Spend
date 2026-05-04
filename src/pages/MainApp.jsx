@@ -388,7 +388,7 @@ export default function MainApp({ tab = "dashboard" }) {
                       whileTap={{ scale: 0.96 }}
                     >
                       <motion.div 
-                        style={{ ...ms.moreIcon, color: active ? "var(--accent)" : "var(--text-secondary)" }}
+                        style={{ ...ms.moreIcon, color: active ? "#111" : "var(--text-secondary)" }}
                         whileHover={{ rotate: [0, -10, 10, 0] }}
                       >
                         {n.icon}

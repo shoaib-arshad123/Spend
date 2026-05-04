@@ -269,7 +269,6 @@ export default function SavingsGoals({ setActiveTab }) {
               <motion.div key={g.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
                 style={{ ...S.goalCard, ...(g.isCompleted ? { borderColor: "var(--green)", background: "var(--green-bg)" } : {}) }}>
                 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 24 }}>{g.icon || "🎯"}</span>
                     <div>
@@ -277,10 +276,6 @@ export default function SavingsGoals({ setActiveTab }) {
                       <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>{g.category}</p>
                     </div>
                   </div>
-                  <motion.button style={S.deleteBtn} onClick={() => handleDelete(g.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                    <Trash2 size={14} />
-                  </motion.button>
-                </div>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "16px 0" }}>
                   <ProgressRing pct={pct} color={ringColor} />

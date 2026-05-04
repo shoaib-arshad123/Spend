@@ -207,7 +207,15 @@ export default function ExpenseHistory({ t, lang, expenses, onDelete, setActiveT
           <option value="date">Date ↓</option>
           <option value="amount">Amount ↓</option>
         </select>
-
+        <motion.button 
+          style={H.exportBtn} 
+          onClick={exportPDF}
+          whileHover={{ scale:1.05, borderColor:"var(--accent)" }}
+          whileTap={{ scale:0.95 }}
+          title="Download expense report as PDF"
+        >
+          <Download size={14} /> PDF
+        </motion.button>
       </div>
 
       {/* Category chips */}
