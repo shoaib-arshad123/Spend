@@ -4,7 +4,7 @@ import { generateId, getAutoCategory } from "../utils/helpers";
 import { getCategoryIcon, getCategoryColor } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
 import { ChevronLeft, Mic, Camera, Sparkles, Plus, Calendar, Clock, FileText, CheckCircle2, AlertTriangle, Zap, TrendingUp } from "lucide-react";
-import VoiceButton from "./VoiceInput";
+import VoiceButton from "./VoiceInput";q
 import BillScanner from "./BillScanner";
 
 const CATS = ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"];
