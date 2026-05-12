@@ -11,8 +11,8 @@ const config = {
   database: process.env.DB_NAME || 'expense_tracker',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 1433,
   options: {
-    encrypt: true, // Necessary for Azure SQL
-    trustServerCertificate: true, // Change to false in production with a CA certificate
+    encrypt: false, // Set to false for Somee compatibility
+    trustServerCertificate: true, 
     enableKeepAlive: true,
   },
   pool: {
