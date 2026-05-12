@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PageSkeleton } from "../components/SkeletonLoader";
 import { useApp } from "../context/AppContext";
 import { LogoIcon } from "../components/LogoIcon";
 import { BarChart3, Mic, Scan, BellRing, Trophy, Languages, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Zap, Shield, TrendingUp } from "lucide-react";
@@ -10,9 +11,15 @@ export function RegisterPage({ onBack, onSwitchToLogin }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitLoading(false), 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const submit = async () => {
     setError("");
@@ -28,6 +35,8 @@ export function RegisterPage({ onBack, onSwitchToLogin }) {
       setError(err.message || "Failed to create account.");
     } finally { setLoading(false); }
   };
+
+  if (initLoading) return <PageSkeleton />;
 
   return (
     <AuthLayout title="Create Account" subtitle="Join the smart tracking community" onBack={onBack}
@@ -64,8 +73,14 @@ export function LoginPage({ onBack, onSwitchToRegister, onSwitchToForgot }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
   const [showPass, setShowPass] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitLoading(false), 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const submit = async () => {
     if (!form.email) return setError("Please enter your email.");
@@ -75,6 +90,8 @@ export function LoginPage({ onBack, onSwitchToRegister, onSwitchToForgot }) {
     catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
+
+  if (initLoading) return <PageSkeleton />;
 
   return (
     <AuthLayout title="Welcome Back" subtitle="Sign in to your financial dashboard" onBack={onBack}
@@ -108,6 +125,14 @@ export function ForgotPage({ onBack, onSwitchToLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitLoading(false), 400);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (initLoading) return <PageSkeleton />;
 
   const requestOtp = async () => {
     if (!identity) return setError("Please enter your email.");
@@ -202,7 +227,7 @@ function BrandPanel() {
           <LogoIcon size={90} showName nameSize={24} glow />
         </motion.div>
         <motion.h2 style={A.brandTitle} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
-          Take Control of<br />Your <span style={{ background: "linear-gradient(135deg, #f5b800, #ffd04a)", backgroundClip: "text", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Finances</span>
+          Take Control of<br />Your <span style={{ background: "linear-gradient(135deg, #fbbf24, #f59e0b)", backgroundClip: "text", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Finances</span>
         </motion.h2>
         <motion.p style={A.brandDesc} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           Join 1,200+ students tracking smarter with AI insights, voice input, and bill scanning.
@@ -230,7 +255,7 @@ function BrandPanel() {
             ))}
           </div>
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
-            <strong style={{ color: "#f5b800" }}>1,200+</strong> students already saving
+            <strong style={{ color: "#f59e0b" }}>1,200+</strong> students already saving
           </span>
         </motion.div>
       </div>
@@ -392,7 +417,7 @@ const A = {
   brandDesc: { fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.7, marginBottom: 32 },
   brandFeatures: { display: "flex", flexDirection: "column", gap: 14, marginBottom: 36 },
   brandFeatureItem: { display: "flex", alignItems: "center", gap: 12 },
-  brandFeatureIcon: { width: 36, height: 36, borderRadius: 10, background: "rgba(245,184,0,0.12)", border: "1px solid rgba(245,184,0,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f5b800", flexShrink: 0 },
+  brandFeatureIcon: { width: 36, height: 36, borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f59e0b", flexShrink: 0 },
   brandTrust: { display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderTop: "1px solid rgba(255,255,255,0.08)" },
   brandAvatar: { width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 },
 
@@ -410,7 +435,7 @@ const A = {
   subtitle: { margin: "8px 0 0", fontSize: 13, color: "var(--text-muted)", fontWeight: 500 },
   content: { display: "flex", flexDirection: "column" },
   label: { display: "flex", alignItems: "center", fontSize: 11, fontWeight: 800, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 },
-  input: { width: "100%", background: "var(--bg-input)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: 14, padding: "12px 16px", fontSize: 14, outline: "none", boxSizing: "border-box", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", fontFamily: "var(--font)", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)" },
+  input: { width: "100%", background: "var(--bg-input)", border: "none", color: "var(--text-primary)", borderRadius: 14, padding: "12px 16px", fontSize: 14, outline: "none", boxSizing: "border-box", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", fontFamily: "var(--font)", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)" },
   submitBtn: { width: "100%", background: "linear-gradient(135deg, var(--accent), var(--orange))", color: "#111", border: "none", padding: "14px", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", transition: "all 0.3s", marginTop: 8, boxShadow: "0 8px 20px rgba(245,158,11,0.3)" },
   footer: { textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--text-muted)", fontWeight: 500 },
   switchBtn: { background: "none", border: "none", color: "var(--accent)", fontWeight: 800, cursor: "pointer", fontSize: 13, textDecoration: "underline", transition: "all 0.2s" },

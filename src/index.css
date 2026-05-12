@@ -2,22 +2,24 @@
 @import "./styles/responsive.css";
 
 :root {
-  /* Dark theme (default) — Deep Blue + Golden Yellow */
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #0e1428;
-  --bg-card: #111830;
-  --bg-card-hover: #182040;
-  --bg-elevated: #1a2444;
-  --bg-input: #080c16;
-  --border: #1e2d52;
-  --border-light: #162040;
-  --text-primary: #f0f4ff;
-  --text-secondary: #8da4c8;
-  --text-muted: #5b7399;
-  --accent: #f5b800;
-  --accent-hover: #ffd04a;
-  --accent-glow: rgba(245,184,0,0.25);
-  --accent-subtle: rgba(245,184,0,0.10);
+  /* Dark theme (Premium Fintech) — Deep Indigo + Amber Gold */
+  --bg-primary: #05070a;
+  --bg-secondary: #0b0f1a;
+  --bg-card: #0f1424;
+  --bg-card-hover: #151b30;
+  --bg-elevated: #1a2036;
+  --bg-input: #020408;
+  --border: #1e2640;
+  --border-light: #161c30;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #f59e0b; /* Amber 500 */
+  --accent-hover: #fbbf24; /* Amber 400 */
+  --accent-glow: rgba(245, 158, 11, 0.2);
+  --accent-subtle: rgba(245, 158, 11, 0.08);
+  --nav-bg: rgba(5, 7, 10, 0.7);
+  --nav-bg-scroll: rgba(5, 7, 10, 0.95);
   --green: #10b981;
   --green-bg: rgba(16,185,129,0.08);
   --red: #ef4444;
@@ -39,32 +41,34 @@
 }
 
 [data-theme="light"] {
-  --bg-primary: #f0f3fa;
-  --bg-secondary: #e8ecf5;
+  --bg-primary: #faf8f5;
+  --bg-secondary: #f3f0eb;
   --bg-card: #ffffff;
-  --bg-card-hover: #f5f8ff;
+  --bg-card-hover: #fffcf7;
   --bg-elevated: #ffffff;
-  --bg-input: #edf0f8;
-  --border: #d4dae8;
-  --border-light: #e8ecf5;
-  --text-primary: #0f1729;
-  --text-secondary: #4a5578;
-  --text-muted: #8892ad;
-  --accent: #d4a000;
-  --accent-hover: #b88c00;
-  --accent-glow: rgba(212,160,0,0.12);
-  --accent-subtle: rgba(212,160,0,0.06);
+  --bg-input: #f5f2ed;
+  --border: #e5ddd2;
+  --border-light: #ede7df;
+  --text-primary: #1a1207;
+  --text-secondary: #5c4f3a;
+  --text-muted: #9a8d7a;
+  --accent: #d97706;
+  --accent-hover: #b45309;
+  --accent-glow: rgba(217,119,6,0.15);
+  --accent-subtle: rgba(217,119,6,0.08);
+  --nav-bg: rgba(250, 248, 245, 0.75);
+  --nav-bg-scroll: rgba(250, 248, 245, 0.95);
   --green: #059669;
-  --green-bg: rgba(5,150,105,0.07);
+  --green-bg: rgba(5,150,105,0.08);
   --red: #dc2626;
-  --red-bg: rgba(220,38,38,0.07);
+  --red-bg: rgba(220,38,38,0.08);
   --blue: #2563eb;
-  --blue-bg: rgba(37,99,235,0.07);
+  --blue-bg: rgba(37,99,235,0.08);
   --purple: #7c3aed;
-  --purple-bg: rgba(124,58,237,0.07);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+  --purple-bg: rgba(124,58,237,0.08);
+  --shadow-sm: 0 2px 8px rgba(26,18,7,0.06);
+  --shadow-md: 0 4px 20px rgba(26,18,7,0.08);
+  --shadow-lg: 0 8px 40px rgba(26,18,7,0.12);
 }
 
 /* Accent Themes */
@@ -101,7 +105,7 @@
   --accent: #f5b800; --accent-hover: #ffd04a; --accent-glow: rgba(245,184,0,0.25); --accent-subtle: rgba(245,184,0,0.10);
 }
 [data-theme="light"][data-accent="orange"] {
-  --accent: #d4a000; --accent-hover: #b88c00; --accent-glow: rgba(212,160,0,0.12); --accent-subtle: rgba(212,160,0,0.06);
+  --accent: #d97706; --accent-hover: #b45309; --accent-glow: rgba(217,119,6,0.15); --accent-subtle: rgba(217,119,6,0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -113,17 +117,30 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
-  transition: background 0.3s, color 0.3s;
+  transition: background 0.4s ease, color 0.3s ease;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 input, select, button, textarea { font-family: var(--font); }
 
-input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
+/* Enforce manual entry by hiding spinners (HCI: cleaner UI) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; transition: background 0.3s; }
+::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.5); }
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(92, 79, 58, 0.2); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(217, 119, 6, 0.4); }
 
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -131,7 +148,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -157,6 +174,22 @@ a { color: var(--accent); text-decoration: none; }
 
 .feature-card:hover, .step-card:hover, .testimonial-card:hover {
   transform: translateY(-8px);
+}
+
+.feature-card::after, .step-card::after, .testimonial-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.feature-card:hover::after, .step-card:hover::after, .testimonial-card:hover::after {
+  opacity: 1;
 }
 
 /* Navigation Link Hover Effects */
@@ -185,9 +218,10 @@ button {
 }
 
 [data-theme="light"] .glass {
-  background: rgba(255, 255, 255, 0.7) !important;
-  backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(26, 18, 7, 0.06) !important;
+  box-shadow: 0 4px 16px rgba(26, 18, 7, 0.04);
 }
 
 /* Floating Background Elements */
@@ -201,10 +235,17 @@ button {
 }
 
 /* Modern Inputs */
-input:focus {
+input:focus:not(.no-focus-box) {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 4px var(--accent-subtle) !important;
   transform: translateY(-1px);
+}
+
+.no-focus-box:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Smooth Card Hover */

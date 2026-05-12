@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { PageSkeleton } from "../components/SkeletonLoader";
 import { LogoIcon } from "../components/LogoIcon";
 import { 
   BarChart3, BrainCircuit, Scan, Mic, BellRing, TrendingUp, Trophy, Languages, 
@@ -8,13 +9,13 @@ import {
 } from "lucide-react";
 
 const FEATURES = [
-  { icon: <BarChart3 />, color:"#f5b800", title:"Smart Dashboard",     desc:"Real-time charts that visualize your spending across all categories. Understand where your money goes at a glance." },
+  { icon: <BarChart3 />, color:"#f59e0b", title:"Smart Dashboard",     desc:"Real-time charts that visualize your spending across all categories. Understand where your money goes at a glance." },
   { icon: <BrainCircuit />, color:"#8b5cf6", title:"AI-Powered Insights", desc:"Behavioral analysis learns your habits and gives personalized financial advice to help you save more every month." },
   { icon: <Scan />, color:"#3b82f6", title:"Bill Scanner",        desc:"Snap a photo of any receipt. Our OCR auto-detects amount, store, and category instantly — no manual typing." },
   { icon: <Mic />, color:"#10b981", title:"Voice Input",         desc:"Say 'spent 200 on food' and the expense is logged hands-free. Perfect for busy students on the go." },
   { icon: <BellRing />, color:"#ec4899", title:"Smart Alerts",        desc:"Get warned before you overspend. Real-time budget alerts keep you informed before it's too late." },
   { icon: <TrendingUp />, color:"#f97316", title:"Deep Analytics",      desc:"Weekly, monthly, and yearly trend charts with predictive forecasting to plan your budget smarter." },
-  { icon: <Trophy />, color:"#f5b800", title:"Reward System",       desc:"Earn badges, maintain streaks, and build healthy financial habits through gamified tracking." },
+  { icon: <Trophy />, color:"#f59e0b", title:"Reward System",       desc:"Earn badges, maintain streaks, and build healthy financial habits through gamified tracking." },
 
   { icon: <Trophy />, color:"#f43f5e", title:"Financial Goals",    desc:"Set saving goals for new gadgets or travel. Track progress automatically as you save." },
   { icon: <TrendingUp />, color:"#0ea5e9", title:"Subscriptions",      desc:"Never pay for an unused service again. Manage all your recurring bills and subscriptions in one place." },
@@ -117,6 +118,12 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setInitLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
 
@@ -145,6 +152,8 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
   const footerTopStyle = isMobile ? { ...L.footerTop, ...L.footerTopMobile } : L.footerTop;
   const footerBottomStyle = isMobile ? { ...L.footerBottom, ...L.footerBottomMobile } : L.footerBottom;
   const heroTrustRowStyle = isMobile ? { ...L.heroTrustRow, ...L.heroTrustRowMobile } : L.heroTrustRow;
+
+  if (initLoading) return <PageSkeleton />;
 
   return (
     <div style={L.root}>
@@ -271,19 +280,6 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               </motion.button>
             </motion.div>
 
-            <motion.div style={heroTrustRowStyle}
-              initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.5, delay:0.65 }}>
-              <div style={L.trustAvatars}>
-                {["👦","👧","🧑‍💻","👩‍🎓","🧑"].map((a,i) => (
-                  <motion.span key={i} style={{ ...L.trustAvatar, marginLeft: i>0 ? -8 : 0 }}
-                    initial={{ opacity:0, scale:0 }} animate={{ opacity:1, scale:1 }}
-                    transition={{ delay:0.7 + i*0.06, type:"spring" }}>{a}</motion.span>
-                ))}
-              </div>
-              <span style={{ fontSize:12, color:"var(--text-secondary)" }}>
-                <strong style={{ color:"var(--accent)" }}>1,200+</strong> students already tracking
-              </span>
-            </motion.div>
             </div>
         </motion.div>
 
@@ -296,7 +292,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
         >
           <MockDashboard />
           {/* Floating cards */}
-          <FloatCard icon="🍔" label="Food · PKR 350" color="#f5b800" style={{ top:"-20px", left:"-60px" }} delay={1.0} />
+          <FloatCard icon="🍔" label="Food · PKR 350" color="#f59e0b" style={{ top:"-20px", left:"-60px" }} delay={1.0} />
           <FloatCard icon="🎙️" label="Voice added!" color="#10b981" style={{ bottom:"60px", right:"-50px" }} delay={1.4} />
           <FloatCard icon="📸" label="Bill scanned" color="#3b82f6" style={{ bottom:"-20px", left:"-40px" }} delay={1.7} />
         </motion.div>
@@ -429,10 +425,10 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               🚀 Create Free Account
             </motion.button>
             <motion.button 
-              style={L.ctaPrimary}
+              style={L.ctaOutline}
               onClick={onLogin} 
               data-no-audio="true" 
-              whileHover={{ scale:1.08, boxShadow: "0 20px 48px rgba(245, 158, 11, 0.35)" }} 
+              whileHover={{ scale:1.08, backgroundColor:"rgba(255,255,255,0.08)", borderColor: "var(--accent)" }} 
               whileTap={{ scale:0.96 }}
             >
               Sign In →
@@ -555,10 +551,10 @@ function MockDashboard() {
       <div style={{ padding:"10px 14px", borderBottom:"1px solid var(--border-light)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
           <span style={{ fontSize:10, color:"var(--text-muted)" }}>Monthly Budget · PKR 15,000</span>
-          <span style={{ fontSize:10, color:"#f5b800", fontWeight:700 }}>67%</span>
+          <span style={{ fontSize:10, color:"var(--accent)", fontWeight:700 }}>67%</span>
         </div>
         <div style={{ height:5, background:"var(--border)", borderRadius:3 }}>
-          <motion.div style={{ height:"100%", borderRadius:3, background:"linear-gradient(90deg,#10b981,#f5b800)" }} initial={{ width:0 }} animate={{ width:"67%" }} transition={{ duration:1.5, delay:0.8 }} />
+          <motion.div style={{ height:"100%", borderRadius:3, background:"linear-gradient(90deg, var(--green), var(--accent))" }} initial={{ width:0 }} animate={{ width:"67%" }} transition={{ duration:1.5, delay:0.8 }} />
         </div>
       </div>
       {/* Mini stats */}
@@ -576,7 +572,7 @@ function MockDashboard() {
         <div style={{ fontSize:9, color:"var(--text-muted)", marginBottom:6 }}>Weekly Spending</div>
         <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:45 }}>
           {[30,55,40,75,25,90,50].map((h,i) => (
-            <motion.div key={i} style={{ flex:1, borderRadius:3, background: i===5 ? "#f5b800" : "var(--border)" }}
+            <motion.div key={i} style={{ flex:1, borderRadius:3, background: i===5 ? "var(--accent)" : "var(--border)" }}
               initial={{ height:0 }} animate={{ height:`${h}%` }} transition={{ duration:0.5, delay:1+i*0.07 }} />
           ))}
         </div>
@@ -595,8 +591,8 @@ const L = {
   orb2:            { position:"fixed", top:"30%", right:"-5%", width:500, height:500, background:"radial-gradient(circle, var(--blue) 0%, transparent 60%)", filter:"blur(80px)", opacity:0.06, pointerEvents:"none", zIndex:0 },
   
   // NAVBAR - Modern Full Width Design with Prominent Logo
-  nav:             { position:"fixed", top:0, left:0, right:0, zIndex:1000, transition:"all 0.4s cubic-bezier(0.4, 0, 0.2, 1)", padding:"0", display:"flex", justifyContent:"center", background:"rgba(10, 14, 26, 0.75)", backdropFilter:"blur(30px) saturate(180%)", borderBottom:"1px solid rgba(255,255,255,0.06)" },
-  navScrolled:     { background:"rgba(10, 14, 26, 0.95)", backdropFilter:"blur(40px)", borderBottom:"1.5px solid var(--accent-subtle)", boxShadow:"0 8px 32px rgba(0,0,0,0.25)" },
+  nav:             { position:"fixed", top:0, left:0, right:0, zIndex:1000, transition:"all 0.4s cubic-bezier(0.4, 0, 0.2, 1)", padding:"0", display:"flex", justifyContent:"center", background:"var(--nav-bg, rgba(5,7,10,0.7))", backdropFilter:"blur(24px) saturate(180%)", borderBottom:"1px solid var(--border-light)" },
+  navScrolled:     { background:"var(--nav-bg-scroll, rgba(5,7,10,0.95))", backdropFilter:"blur(40px)", borderBottom:"1px solid var(--accent-subtle)", boxShadow:"var(--shadow-md)" },
   navInner:        { width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 48px", maxWidth:"1400px" },
   navLogo:         { display:"flex", alignItems:"center", gap:10, textDecoration:"none", transition:"all 0.3s", position:"relative", flexShrink:0 },
   logoText:        { fontSize:18, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.8px" },
@@ -605,17 +601,17 @@ const L = {
   navCTAs:         { display:"flex", gap:12, alignItems:"center", flexShrink:0 },
   themeToggleBtn:  { background:"transparent", border:"1.5px solid var(--border)", color:"var(--text-primary)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:38, height:38, borderRadius:"50%", transition:"all 0.3s" },
   navLoginBtn:     { background:"transparent", border:"1.5px solid var(--border)", color:"var(--text-primary)", padding:"10px 22px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.3s" },
-  navRegBtn:       { background:"linear-gradient(135deg, var(--accent), #ffd04a)", border:"none", color:"#000", padding:"10px 24px", borderRadius:10, fontSize:13, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 4px 16px rgba(245,184,0,0.25)" },
+  navRegBtn:       { background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"10px 24px", borderRadius:10, fontSize:13, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 4px 16px rgba(245, 158, 11, 0.25)" },
   
   // HERO - Compact Width
   hero:            { minHeight:"85vh", display:"grid", gridTemplateColumns:"1fr 1fr", alignItems:"center", maxWidth:"1200px", margin:"0 auto", padding:"120px 32px 60px", gap:60, position:"relative", zIndex:1 },
   heroContent:     { maxWidth:550 },
   heroBadge:       { display:"inline-flex", alignItems:"center", gap:8, background:"var(--accent-subtle)", border:"1.5px solid var(--accent-glow)", color:"var(--accent)", padding:"6px 14px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:24, textTransform:"uppercase", letterSpacing:"0.5px" },
   heroBadgeDot:    { width:6, height:6, borderRadius:"50%", background:"var(--accent)", animation:"pulse-glow 2s infinite" },
-  heroH1:          { fontWeight:950, fontSize:56, lineHeight:1.15, margin:"0 0 20px", letterSpacing:"-2.5px", color:"var(--text-primary)" },
+  heroH1:          { fontWeight:950, fontSize:64, lineHeight:1.1, margin:"0 0 24px", letterSpacing:"-3px", background:"linear-gradient(135deg, #fff 30%, var(--accent) 100%)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" },
   heroSub:         { fontSize:16, color:"var(--text-secondary)", lineHeight:1.7, margin:"0 0 36px", maxWidth:480 },
   heroCTAs:        { display:"flex", gap:14, marginBottom:32, flexWrap:"wrap" },
-  ctaPrimary:      { background:"linear-gradient(135deg, var(--accent), #ffd04a)", color:"#111", border:"none", padding:"14px 32px", borderRadius:10, fontSize:15, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 8px 24px rgba(245, 184, 0, 0.3)" },
+  ctaPrimary:      { background:"linear-gradient(135deg, #f59e0b, #ea580c)", color:"#fff", border:"none", padding:"14px 32px", borderRadius:10, fontSize:15, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 8px 24px rgba(245, 158, 11, 0.3)" },
   ctaOutline:      { background:"rgba(255, 255, 255, 0.05)", border:"1.5px solid var(--border)", color:"var(--text-primary)", padding:"14px 32px", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", transition:"all 0.3s" },
   heroTrustRow:    { display:"flex", alignItems:"center", gap:14, fontSize:13, color:"var(--text-muted)", fontWeight:600 },
   trustAvatars:    { display:"flex", marginLeft:8 },
@@ -631,7 +627,7 @@ const L = {
   statsSection:    { padding:"0 32px 140px", maxWidth:"1200px", margin:"0 auto" },
   statsGrid:       { display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:20 },
   statCard:        { background:"linear-gradient(135deg, var(--bg-card), rgba(255, 159, 28, 0.05))", border:"1.5px solid var(--border)", borderRadius:24, padding:"32px 20px", textAlign:"center", transition:"all 0.3s", position:"relative", overflow:"hidden" },
-  statNum:         { fontSize:40, fontWeight:950, background:"linear-gradient(135deg, var(--accent), #ffd04a)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"8px 0 6px", letterSpacing:"-1.5px", lineHeight:1 },
+  statNum:         { fontSize:40, fontWeight:950, background:"linear-gradient(135deg, #fbbf24, var(--accent), #f97316)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"8px 0 6px", letterSpacing:"-1.5px", lineHeight:1 },
   statLabel:       { fontSize:12, color:"var(--text-muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px" },
 
   // FEATURES
@@ -651,7 +647,7 @@ const L = {
   stepsRow:        { display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:28, marginTop:56 },
   stepCard:        { position:"relative", padding:"44px 28px", background:"linear-gradient(135deg, var(--bg-card), rgba(245, 158, 11, 0.03))", border:"1.5px solid var(--border)", borderRadius:28, textAlign:"center", transition:"all 0.4s" },
   stepNumBadge:    { position:"absolute", top:20, right:24, fontSize:56, fontWeight:950, color:"var(--text-primary)", opacity:0.04, lineHeight:1 },
-  stepIconCircle:  { width:64, height:64, background:"linear-gradient(135deg, var(--accent), #ffd04a)", backgroundClip:"content-box", border:"1.5px solid var(--border)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:28, color:"#000" },
+  stepIconCircle:  { width:64, height:64, background:"linear-gradient(135deg, var(--accent), #f97316)", backgroundClip:"content-box", border:"1.5px solid var(--border)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:28, color:"#000" },
   stepTitle:       { fontSize:22, fontWeight:850, marginBottom:12, color:"var(--text-primary)" },
   stepDesc:        { fontSize:15, color:"var(--text-secondary)", lineHeight:1.6 },
   stepArrow:       { position:"absolute", right:"-28px", top:"50%", transform:"translateY(-50%)", fontSize:24, color:"var(--border)", opacity:0.3 },
@@ -660,7 +656,7 @@ const L = {
   testGrid:        { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(320px, 1fr))", gap:24, marginTop:56 },
   testCard:        { background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:28, padding:"36px 28px", transition:"all 0.3s" },
   testAvatar:      { width:48, height:48, borderRadius:"50%", background:"linear-gradient(135deg, var(--accent-glow), rgba(255, 159, 28, 0.2))", border:"1.5px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 },
-  testStars:       { color:"#f5b800", fontSize:13, letterSpacing:3, marginBottom:20 },
+  testStars:       { color:"#fbbf24", fontSize:13, letterSpacing:3, marginBottom:20 },
   testText:        { fontSize:15, color:"var(--text-primary)", lineHeight:1.7, fontStyle:"italic", margin:"0 0 20px" },
 
   // FAQ
@@ -671,10 +667,10 @@ const L = {
 
   // CTA
   ctaBanner:       { padding:"100px 32px" },
-  ctaBannerInner:  { maxWidth:"1000px", margin:"0 auto", background:"linear-gradient(135deg, var(--accent), #ffd04a)", borderRadius:36, padding:"64px 40px", textAlign:"center", color:"#000", position:"relative", overflow:"hidden" },
-  ctaBannerGlow:   { position:"absolute", top:"-30%", left:"50%", transform:"translateX(-50%)", width:600, height:600, background:"radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%)", pointerEvents:"none" },
-  ctaBannerTitle:  { fontSize:42, fontWeight:950, margin:"0 0 14px", letterSpacing:"-2px", lineHeight:1.1 },
-  ctaBannerSub:    { fontSize:18, fontWeight:700, margin:"0 auto 40px", maxWidth:500, opacity:0.88 },
+  ctaBannerInner:  { maxWidth:"1000px", margin:"0 auto", background:"var(--bg-card)", border:"1.5px solid var(--accent-subtle)", borderRadius:36, padding:"72px 48px", textAlign:"center", color:"var(--text-primary)", position:"relative", overflow:"hidden", boxShadow:"0 0 60px var(--accent-subtle), var(--shadow-lg)" },
+  ctaBannerGlow:   { position:"absolute", top:"-40%", left:"50%", transform:"translateX(-50%)", width:700, height:700, background:"radial-gradient(circle, var(--accent-glow) 0%, var(--accent-subtle) 30%, transparent 70%)", pointerEvents:"none" },
+  ctaBannerTitle:  { fontSize:42, fontWeight:950, margin:"0 0 14px", letterSpacing:"-2px", lineHeight:1.1, color:"var(--text-primary)" },
+  ctaBannerSub:    { fontSize:18, fontWeight:500, margin:"0 auto 40px", maxWidth:500, color:"var(--text-secondary)" },
 
   // FOOTER - Modern with Logo
   footer:          { borderTop:"1.5px solid var(--border)", background:"var(--bg-card)", padding:"100px 32px 60px", position:"relative", zIndex:2 },
@@ -689,7 +685,7 @@ const L = {
   
   footerTier:      { borderTop:"1.5px solid var(--border-light)", paddingTop:48, textAlign:"center" },
   footerCtaWrap:   { display:"flex", alignItems:"center", justifyContent:"center", gap:24 },
-  footerCtaBtn:    { background:"linear-gradient(135deg, var(--accent), #ffd04a)", border:"none", color:"#000", padding:"12px 32px", borderRadius:100, fontSize:14, fontWeight:800, cursor:"pointer", transition:"all 0.3s" },
+  footerCtaBtn:    { background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"12px 32px", borderRadius:100, fontSize:14, fontWeight:800, cursor:"pointer", transition:"all 0.3s" },
   
   footerSocialRow: { display:"flex", justifyContent:"center", gap:16 },
   footerSocialCircle: { width:44, height:44, border:"2px solid var(--text-muted)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-primary)", cursor:"pointer", transition:"all 0.3s" },

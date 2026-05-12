@@ -10,7 +10,7 @@ import { getCategoryColor, getCategoryIcon } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
 // CelebrationPopup removed from here, moved to MainApp.jsx
 
-const COLORS = ["#f5b800","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#06b6d4","#ef4444","#84cc16","#6366f1"];
+const COLORS = ["#f59e0b","#3b82f6","#8b5cf6","#10b981","#ec4899","#f97316","#06b6d4","#ef4444","#84cc16","#6366f1"];
 
 // 3D Tilt Card Component
 function TiltCard({ children, style, delay = 0, className = "" }) {
@@ -91,7 +91,7 @@ function EmptyState({ icon, title, desc, action, onAction }) {
   );
 }
 
-const emptyBtn = { marginTop:6, background:"linear-gradient(135deg,#f5b800,#ffd04a)", border:"none", color:"#111", padding:"10px 22px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" };
+const emptyBtn = { marginTop:6, background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#111", padding:"10px 22px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:700, fontFamily:"var(--font)" };
 
 // Custom tooltip for pie chart showing category name + amount
 const CategoryTooltip = ({ active, payload }) => {
@@ -277,7 +277,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         </div>
         <div style={{...D.progressTrack, marginBottom:8}}>
           <motion.div
-            style={{ height:"100%", borderRadius:6, background: pct>=100?"var(--red)":pct>=80?"#f5b800":"linear-gradient(90deg,var(--green),var(--accent))" }}
+            style={{ height:"100%", borderRadius:6, background: pct>=100?"var(--red)":pct>=80?"var(--accent)":"linear-gradient(90deg,var(--green),var(--accent))" }}
             initial={{ width:0 }}
             animate={{ width:`${Math.min(pct,100)}%` }}
             transition={{ duration:1.2, ease:"easeOut" }}
@@ -426,7 +426,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               <Tooltip {...TT} formatter={v=>[`PKR ${v.toLocaleString()}`,"Spent"]} />
               <Bar dataKey="amount" radius={[5,5,0,0]}>
                 {barData.map((entry, i) => (
-                  <Cell key={i} fill={entry.isToday ? "#f5b800" : entry.amount>0 ? "#3b82f6" : "var(--border)"} />
+                  <Cell key={i} fill={entry.isToday ? "var(--accent)" : entry.amount>0 ? "var(--blue)" : "var(--border)"} />
                 ))}
               </Bar>
             </BarChart>
@@ -637,7 +637,7 @@ const D = {
   recentAmt:      { fontSize:14, color:"var(--red)", fontWeight:800, whiteSpace:"nowrap", flexShrink:0, letterSpacing:"-0.5px" },
   viewAllBtn:     { background:"transparent", border:"none", color:"var(--accent)", fontSize:12, cursor:"pointer", fontWeight:700, fontFamily:"var(--font)" },
   alertBanner: {
-    background: "linear-gradient(135deg, #f5b800, #ffd04a)",
+    background: "linear-gradient(135deg, var(--accent), #f97316)",
     borderRadius: 14,
     padding: "12px 16px",
     marginBottom: 16,

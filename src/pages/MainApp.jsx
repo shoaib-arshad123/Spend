@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
@@ -14,9 +14,10 @@ import Analytics      from "../components/Analytics";
 import RecurringExpenses from "../components/RecurringExpenses";
 import SavingsGoals   from "../components/SavingsGoals";
 import CelebrationPopup from "../components/CelebrationPopup";
+import { DashboardSkeleton, PageSkeleton, HistorySkeleton, AnalyticsSkeleton, AddExpenseSkeleton, ProfileSkeleton, RewardsSkeleton } from "../components/SkeletonLoader";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { classifyUser, formatPKR } from "../utils/helpers";
-import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Globe, Bell, LogOut, Repeat, Target, MoreHorizontal, MoreVertical } from "lucide-react";
+import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Globe, Bell, LogOut, Repeat, Target, MoreHorizontal, MoreVertical, ShieldCheck } from "lucide-react";
 
 
 const NAV = [
@@ -43,6 +44,8 @@ export default function MainApp({ tab = "dashboard" }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
+  const prevTabRef = useRef(tab);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -50,11 +53,24 @@ export default function MainApp({ tab = "dashboard" }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Show skeleton briefly when switching tabs (HCI: system status visibility)
+  useEffect(() => {
+    if (prevTabRef.current !== tab) {
+      setPageLoading(true);
+      const timer = setTimeout(() => {
+        setPageLoading(false);
+        prevTabRef.current = tab;
+      }, 450); // Slightly longer for better visibility of content-matched skeletons
+      return () => clearTimeout(timer);
+    }
+  }, [tab]);
+
   // Map route keys to human readable paths if needed, 
   // but we'll use a direct mapping for simplicity
   const activeTab = tab; 
 
-  const handleTabChange = (key) => {
+  const handleTabChange = useCallback((key) => {
+    if (key === activeTab) return;
     const paths = {
       dashboard: "/dashboard",
       analytics: "/analytics",
@@ -69,7 +85,7 @@ export default function MainApp({ tab = "dashboard" }) {
     navigate(paths[key] || "/dashboard");
     setSidebarOpen(false);
     setShowMoreMenu(false);
-  };
+  }, [activeTab, navigate]);
 
   const t          = translations;
   const totalSpent = expenses.reduce((s,e) => s+e.amount, 0);
@@ -232,14 +248,21 @@ export default function MainApp({ tab = "dashboard" }) {
                 {showNotif && <NotificationCenter onClose={() => setShowNotif(false)} />}
               </AnimatePresence>
             </div>
-            {/* Avatar */}
-            <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-              {user?.photo ? (
-                <img src={user.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-              ) : (
-                user?.avatar||"🧑‍💻"
+            {/* Avatar with optional verified badge */}
+            <div style={{ position: "relative" }}>
+              <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                {user?.photo ? (
+                  <img src={user.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ) : (
+                  user?.avatar||"🧑‍💻"
+                )}
+              </motion.button>
+              {user?.isEmailVerified && (
+                <div style={{ position: "absolute", bottom: -2, right: -2, background: "var(--bg-card)", borderRadius: "50%", padding: 2, display: "flex" }}>
+                  <ShieldCheck size={12} color="var(--green)" fill="var(--green-bg)" />
+                </div>
               )}
-            </motion.button>
+            </div>
           </div>
         </header>
 
@@ -257,16 +280,46 @@ export default function MainApp({ tab = "dashboard" }) {
           </motion.div>
         )}
 
+        {/* Email verification warning */}
+        {user && !user.isEmailVerified && activeTab !== "profile" && (
+          <motion.div
+            initial={{ opacity:0, y:-10 }}
+            animate={{ opacity:1, y:0 }}
+            style={ms.verifyBanner}
+          >
+            <span>🔒</span>
+            <span style={{ flex:1, fontSize:13 }}>Your email is not verified. Verify your email to secure your account and enable all features.</span>
+            <motion.button style={ms.verifyBannerBtn} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Verify Now →</motion.button>
+          </motion.div>
+        )}
+
         <div style={ms.content}>
           <AnimatePresence mode="wait">
-            <motion.div key={activeTab}
-              initial={{ opacity:0, y:15, scale:0.98 }}
-              animate={{ opacity:1, y:0, scale:1 }}
-              exit={{ opacity:0, y:-15, scale:0.98 }}
-              transition={{ duration:0.3, ease:"easeOut" }}
-            >
-              {renderPage()}
-            </motion.div>
+            {pageLoading ? (
+              <motion.div key="skeleton"
+                initial={{ opacity:0 }}
+                animate={{ opacity:1 }}
+                exit={{ opacity:0 }}
+                transition={{ duration:0.15 }}
+              >
+                {activeTab === "dashboard" ? <DashboardSkeleton /> 
+                  : activeTab === "history" ? <HistorySkeleton /> 
+                  : activeTab === "analytics" ? <AnalyticsSkeleton />
+                  : activeTab === "addExpense" ? <AddExpenseSkeleton />
+                  : activeTab === "profile" ? <ProfileSkeleton />
+                  : activeTab === "rewards" ? <RewardsSkeleton />
+                  : <PageSkeleton />}
+              </motion.div>
+            ) : (
+              <motion.div key={activeTab}
+                initial={{ opacity:0, y:10 }}
+                animate={{ opacity:1, y:0 }}
+                exit={{ opacity:0 }}
+                transition={{ duration:0.25, ease:[0.25, 0.46, 0.45, 0.94] }}
+              >
+                {renderPage()}
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
@@ -415,7 +468,7 @@ const ms = {
   sidebar:      { position:"fixed", top:0, left:0, bottom:0, width:240, background:"var(--bg-card)", borderRight:"1px solid var(--border)", zIndex:300, display:"flex", flexDirection:"column" },
   sidebarTop:   { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px", borderBottom:"1px solid var(--border-light)" },
   sbLogo:       { display:"flex", alignItems:"center", gap:8 },
-  sbLogoIcon:   { width:28, height:28, background:"linear-gradient(135deg,#f5b800,#ffd04a)", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 },
+  sbLogoIcon:   { width:28, height:28, background:"linear-gradient(135deg, var(--accent), #f97316)", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 },
   sbBrand:      { fontSize:15, fontWeight:800, color:"var(--accent)" },
   sbClose:      { background:"transparent", border:"none", color:"var(--text-muted)", cursor:"pointer", fontSize:16 },
   sbUser:       { display:"flex", alignItems:"center", gap:10, padding:"12px", borderBottom:"1px solid var(--border-light)" },
@@ -437,15 +490,17 @@ const ms = {
   iconBtn:      { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", flexShrink:0 },
   notifDot:     { position:"absolute", top:-4, right:-4, background:"var(--red)", color:"#fff", fontSize:9, fontWeight:700, width:14, height:14, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
   avatarBtn:    { background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:"50%", width:32, height:32, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" },
-  budgetBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--accent-subtle)", borderBottom:"1px solid rgba(245,184,0,0.25)", fontSize:12 },
+  budgetBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--accent-subtle)", borderBottom:"1px solid var(--accent-glow)", fontSize:12 },
   budgetBannerBtn:{ background:"var(--accent)", border:"none", color:"#111", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap", fontFamily:"var(--font)" },
+  verifyBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--red-bg)", borderBottom:"1px solid rgba(239,68,68,0.25)", fontSize:12 },
+  verifyBannerBtn:{ background:"var(--red)", border:"none", color:"#fff", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap", fontFamily:"var(--font)" },
   content:      { flex:1, overflowY:"auto", paddingBottom: 80 },
   bottomNav:    { position:"fixed", bottom:0, left:0, right:0, background:"var(--bg-card)", borderTop:"1px solid var(--border)", display:"flex", zIndex:100, height:52, alignItems:"center", padding:"0 4px", boxShadow:"0 -4px 20px rgba(0,0,0,0.2)" },
   bottomItem:   { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"transparent", border:"none", color:"var(--text-secondary)", cursor:"pointer", fontFamily:"var(--font)", position:"relative", transition:"all 0.3s ease", height:"100%", gap:2 },
   bottomActive: { color:"var(--accent)" },
   bottomIconWrap:{ position:"relative", display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:10, transition:"all 0.3s ease" },
   bottomFabWrap:{ flex:1, display:"flex", justifyContent:"center", alignItems:"center", height:"100%" },
-  bottomFab:    { width:42, height:42, borderRadius:12, background:"linear-gradient(135deg,#f5b800,#ffd04a)", color:"#111", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 4px 12px rgba(245,184,0,0.3)" },
+  bottomFab:    { width:42, height:42, borderRadius:12, background:"linear-gradient(135deg, var(--accent), #f97316)", color:"#111", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.3)" },
   dropdown:     { position:"absolute", top:34, right:0, background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, width:150, padding:6, zIndex:1000, boxShadow:"var(--shadow-lg)" },
   dropdownHeader:{ fontSize:10, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", padding:"6px 10px 4px" },
   dropdownItem: { width:"100%", display:"flex", alignItems:"center", gap:8, padding:"8px 10px", background:"transparent", border:"none", color:"var(--text-primary)", borderRadius:8, cursor:"pointer", fontSize:12, textAlign:"left", fontFamily:"var(--font)", transition:"0.2s" },

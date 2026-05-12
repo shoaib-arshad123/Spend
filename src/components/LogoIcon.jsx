@@ -55,7 +55,7 @@ export function LogoIcon({
         <span style={{ 
           fontSize: nameSize, 
           fontWeight: 900, 
-          background: "linear-gradient(135deg, #f5b800, #ffd04a)",
+          background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
           backgroundClip: "text",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",

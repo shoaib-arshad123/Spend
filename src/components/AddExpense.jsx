@@ -4,12 +4,12 @@ import { generateId, getAutoCategory } from "../utils/helpers";
 import { getCategoryIcon, getCategoryColor } from "../i18n/translations";
 import { useApp } from "../context/AppContext";
 import { ChevronLeft, Mic, Camera, Sparkles, Plus, Calendar, Clock, FileText, CheckCircle2, AlertTriangle, Zap, TrendingUp } from "lucide-react";
-import VoiceButton from "./VoiceInput";q
+import VoiceButton from "./VoiceInput";
 import BillScanner from "./BillScanner";
 
 const CATS = ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"];
 const CAT_COLORS = { 
-  "Food & Dining": "#f5b800", 
+  "Food & Dining": "#f59e0b", 
   "Transportation": "#3b82f6", 
   "Education": "#8b5cf6", 
   "Health & Fitness": "#10b981", 
@@ -146,6 +146,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
               onChange={e => { setAmount(e.target.value); setError(""); }}
               placeholder="0"
               style={AE.amountInput}
+              className="no-focus-box"
               min="1" autoFocus
             />
           </div>
@@ -264,6 +265,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
               onChange={e => setNote(e.target.value)}
               placeholder="e.g. Canteen lunch, Rickshaw to uni..."
               style={AE.noteInput}
+              className="no-focus-box"
               onKeyDown={e => e.key==="Enter" && submit()}
             />
           </div>
@@ -416,7 +418,7 @@ const AE = {
   // Amount Card - Hero style
   amountCard: { 
     background:"var(--bg-card)",
-    border:"1px solid var(--accent-glow)", borderRadius:20, 
+    border:"1px solid var(--border)", borderRadius:20, 
     padding:"16px 18px", position:"relative", overflow:"hidden" 
   },
   amountOrb: {
@@ -438,7 +440,7 @@ const AE = {
   amountBadge: {
     display:"flex", alignItems:"center", gap:6, padding:"4px 10px", 
     background:"var(--accent-subtle)", borderRadius:8, marginBottom:10, 
-    border:"1px solid var(--accent-glow)", width:"fit-content"
+    border:"none", width:"fit-content"
   },
   quickRow: { display:"flex", gap:6, flexWrap:"wrap", position:"relative", zIndex:1 },
   quickBtn: { 
@@ -454,7 +456,7 @@ const AE = {
   smartBar: { 
     display:"flex", alignItems:"center", justifyContent:"space-between", gap:10,
     background:"var(--bg-card)", 
-    border:"1px solid var(--accent-glow)", 
+    border:"1px solid var(--border)", 
     borderRadius:14, padding:"10px 14px",
   },
   smartLeft: { display:"flex", alignItems:"center", gap:10 },
@@ -502,7 +504,7 @@ const AE = {
   },
   
   noteInput: { 
-    width:"100%", background:"var(--bg-input)", border:"1px solid var(--border)", 
+    width:"100%", background:"var(--bg-input)", border:"none", 
     color:"var(--text-primary)", borderRadius:12, padding:"10px 14px 10px 36px", 
     fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"var(--font)" 
   },
@@ -525,7 +527,7 @@ const AE = {
   },
   saveBtn: { 
     flex:2, padding:"12px", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-    background:"linear-gradient(135deg, #f5b800 0%, #ffd04a 50%, #f5b800 100%)", 
+    background:"linear-gradient(135deg, var(--accent) 0%, #f97316 100%)", 
     backgroundSize:"200% auto",
     border:"none", color:"#111", borderRadius:12, cursor:"pointer", 
     fontSize:14, fontWeight:800, fontFamily:"var(--font)" 

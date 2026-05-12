@@ -1,33 +1,26 @@
 // src/config/database.js
-import sql from 'mssql/msnodesqlv8.js';
+import sql from 'mssql';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const isWindowsAuth = !process.env.DB_USER;
-
-const config = isWindowsAuth
-  ? {
-      connectionString: `server=${process.env.DB_SERVER || 'localhost'}\\${process.env.DB_INSTANCE || 'SQLEXPRESS'};Database=${process.env.DB_NAME || 'expense_tracker'};Trusted_Connection=Yes;Driver={ODBC Driver 17 for SQL Server}`
-    }
-  : {
-      server: process.env.DB_SERVER || 'localhost',
-      authentication: {
-        type: 'default',
-        options: {
-          userName: process.env.DB_USER || '',
-          password: process.env.DB_PASSWORD || ''
-        }
-      },
-      options: {
-        instanceName: process.env.DB_INSTANCE || undefined,
-        port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : undefined,
-        database: process.env.DB_NAME || 'expense_tracker',
-        encrypt: false,
-        trustServerCertificate: true,
-        enableKeepAlive: true
-      }
-    };
+const config = {
+  server: process.env.DB_SERVER || 'localhost',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME || 'expense_tracker',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 1433,
+  options: {
+    encrypt: true, // Necessary for Azure SQL
+    trustServerCertificate: true, // Change to false in production with a CA certificate
+    enableKeepAlive: true,
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  }
+};
 
 export const pool = new sql.ConnectionPool(config);
 
