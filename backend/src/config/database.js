@@ -4,8 +4,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const dbServer = process.env.DB_SERVER || 'localhost';
+console.log(`[DB] Attempting connection to: ${dbServer}`);
+
 const config = {
-  server: process.env.DB_SERVER || 'localhost',
+  server: dbServer,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'expense_tracker',
