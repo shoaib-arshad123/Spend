@@ -314,3 +314,54 @@ input:focus:not(.no-focus-box) {
   0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 var(--accent-glow); }
   50% { opacity: 0.7; transform: scale(1.1); box-shadow: 0 0 10px 4px var(--accent-glow); }
 }
+
+/* ── Landing Page: Hero H1 theme-aware gradient ─────────────────────────────
+   Dark mode: white → accent gradient (looks great on dark bg)
+   Light mode: deep dark → accent gradient (readable on light bg)          */
+.hero-title {
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] .hero-title {
+  background: linear-gradient(135deg, #1a1207 20%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Landing Page: light mode card/section polish ───────────────────────────*/
+[data-theme="light"] .landing-feat-card,
+[data-theme="light"] .landing-step-card,
+[data-theme="light"] .landing-test-card {
+  box-shadow: 0 2px 12px rgba(26, 18, 7, 0.06);
+}
+
+[data-theme="light"] .landing-feat-card:hover,
+[data-theme="light"] .landing-step-card:hover,
+[data-theme="light"] .landing-test-card:hover {
+  box-shadow: 0 16px 48px rgba(217, 119, 6, 0.12) !important;
+}
+
+/* glass nav in light mode */
+[data-theme="light"] .glass {
+  background: rgba(250, 248, 245, 0.85) !important;
+  border: 1px solid rgba(26, 18, 7, 0.08) !important;
+}
+
+/* ── App: More menu — always show on mobile ─────────────────────────────────*/
+@media (max-width: 767px) {
+  /* Force the more menu to be visible and properly positioned */
+  .app-more-menu {
+    position: fixed !important;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    transform: none !important;
+    max-width: 100% !important;
+    z-index: 199 !important;
+  }
+}

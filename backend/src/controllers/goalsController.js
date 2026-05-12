@@ -1,8 +1,9 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 // Get all savings goals for user
 export const getGoals = async (req, res) => {
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('userId', req.userId)
       .query('SELECT * FROM savings_goals WHERE userId = @userId ORDER BY isCompleted ASC, deadline ASC');
@@ -16,6 +17,7 @@ export const getGoals = async (req, res) => {
 // Create savings goal
 export const createGoal = async (req, res) => {
   try {
+    const pool = await getPool();
     const { name, targetAmount, category, icon, deadline } = req.body;
     if (!name || !targetAmount) {
       return res.status(400).json({ success: false, message: 'Name and target amount are required' });
@@ -44,6 +46,7 @@ export const createGoal = async (req, res) => {
 // Add savings to a goal
 export const addSavings = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     const { amount } = req.body;
 
@@ -78,6 +81,7 @@ export const addSavings = async (req, res) => {
 // Update savings goal
 export const updateGoal = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     const { name, targetAmount, category, icon, deadline } = req.body;
 
@@ -106,6 +110,7 @@ export const updateGoal = async (req, res) => {
 // Delete savings goal
 export const deleteGoal = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     await pool.request()
       .input('id', id)

@@ -74,13 +74,14 @@ function StatCard({ icon, value, suffix, label }) {
     <motion.div 
       ref={ref} 
       style={L.statCard}
+      className="landing-stat-card"
       whileHover={{ y: -6, borderColor: "var(--accent-glow)", boxShadow: "0 16px 48px rgba(245, 158, 11, 0.15)" }}
       transition={{ duration: 0.3 }}
     >
       <motion.span style={{ fontSize:32 }} whileHover={{ scale: 1.2, rotate: 10 }} transition={{ duration: 0.3 }}>
         {icon}
       </motion.span>
-      <div style={L.statNum}>{count}{suffix}</div>
+      <div style={L.statNum} className="landing-stat-num">{count}{suffix}</div>
       <div style={L.statLabel}>{label}</div>
     </motion.div>
   );
@@ -96,6 +97,7 @@ function FAQItem({ q, a }) {
     >
       <motion.button 
         style={L.faqQ} 
+        className="landing-faq-q"
         onClick={() => setOpen(!open)}
         whileHover={{ backgroundColor: "rgba(245, 158, 11, 0.04)" }}
         transition={{ duration: 0.2 }}
@@ -106,7 +108,7 @@ function FAQItem({ q, a }) {
       <AnimatePresence>
         {open && (
           <motion.div initial={{ height:0, opacity:0 }} animate={{ height:"auto", opacity:1 }} exit={{ height:0, opacity:0 }} transition={{ duration:0.25 }} style={{ overflow:"hidden" }}>
-            <p style={L.faqA}>{a}</p>
+            <p style={L.faqA} className="landing-faq-a">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -248,7 +250,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </nav>
 
       {/* ── HERO ── */}
-      <section style={heroStyle}>
+      <section style={heroStyle} className="landing-hero">
         <motion.div style={{ ...heroContentStyle, y: heroY }}>
           <div>
             <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}>
@@ -270,7 +272,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               and builds real financial discipline — <span style={{ color: "var(--accent)", fontWeight: 600 }}>for free</span>, in your language.
             </motion.p>
 
-            <motion.div style={L.heroCTAs}
+            <motion.div style={L.heroCTAs} className="landing-hero-ctas"
               initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.5 }}>
               <motion.button style={L.ctaPrimary} onClick={onGetStarted} whileHover={{ scale:1.08, boxShadow:"0 20px 48px rgba(245, 158, 11, 0.35)" }} whileTap={{ scale:0.96 }}>
                 🚀 Create Free Account
@@ -289,6 +291,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
           animate={{ opacity:1, x:0, rotateY:0 }}
           transition={{ duration:0.9, delay:0.2, type:"spring", stiffness:80 }}
           style={{ ...L.heroVisual, display: isMobile ? "none" : "flex" }}
+          className="landing-hero-visual"
         >
           <MockDashboard />
           {/* Floating cards */}
@@ -300,15 +303,15 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
 
       {/* ── STATS ── */}
       <section style={L.statsSection}>
-        <div style={statsGridStyle}>
+        <div style={statsGridStyle} className="landing-stats-grid">
           {STATS.map(s => <StatCard key={s.label} {...s} />)}
         </div>
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={sectionStyle}>
+      <section id="features" style={sectionStyle} className="landing-section">
         <SectionHeader tag="Everything You Need" title="Powerful Features for Smart Students" sub="From voice input to bill scanning — every tool to make expense tracking effortless and intelligent." />
-        <div style={L.featGrid}>
+        <div style={L.featGrid} className="landing-feat-grid">
           {FEATURES.map((f, i) => (
             <motion.div
               key={f.title}
@@ -318,7 +321,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               viewport={{ once:true, margin:"-40px" }}
               transition={{ duration:0.6, delay: i * 0.08, ease:[0.19, 1, 0.22, 1] }}
               whileHover={{ y:-12, boxShadow:"0 32px 72px -16px rgba(0,0,0,0.25)", borderColor:"var(--accent-glow)" }}
-              className="feature-card"
+              className="feature-card landing-feat-card"
             >
               <motion.div 
                 style={{ ...L.featIconBox, background: `linear-gradient(135deg, ${f.color}22, ${f.color}08)`, border:`1.5px solid ${f.color}33`, color: f.color }}
@@ -336,9 +339,9 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" style={altSectionStyle}>
+      <section id="how-it-works" style={altSectionStyle} className="landing-alt-section">
         <SectionHeader tag="Simple Process" title="Up & Running in 3 Steps" sub="No complicated setup. Start tracking in minutes." />
-        <div style={stepsRowStyle}>
+        <div style={stepsRowStyle} className="landing-steps-row">
           {STEPS.map((step, i) => (
             <motion.div
               key={step.num}
@@ -348,7 +351,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               viewport={{ once:true }}
               transition={{ delay: i * 0.15 }}
               whileHover={{ y:-8, boxShadow:"0 24px 56px rgba(245, 158, 11, 0.15)", borderColor: "var(--accent-glow)" }}
-              className="step-card"
+              className="step-card landing-step-card"
             >
               <div style={L.stepNumBadge}>{step.num}</div>
               <motion.div 
@@ -367,9 +370,9 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section id="testimonials" style={sectionStyle}>
+      <section id="testimonials" style={sectionStyle} className="landing-section">
         <SectionHeader tag="What Students Say" title="Real Feedback from Real Users" sub="Over 1,200 students across Pakistan trust SpendSmart with their finances." />
-        <div style={L.testGrid} className="responsive-grid">
+        <div style={L.testGrid} className="responsive-grid landing-test-grid">
           {TESTIMONIALS.map((t, i) => (
             <motion.div
               key={t.name}
@@ -379,7 +382,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               viewport={{ once:true }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y:-8, boxShadow:"0 20px 56px rgba(245, 158, 11, 0.12)", borderColor: "var(--accent-glow)" }}
-              className="testimonial-card"
+              className="testimonial-card landing-test-card"
             >
               <div style={{ display:"flex", gap:10, marginBottom:14, alignItems:"center" }}>
                 <motion.span 
@@ -402,7 +405,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" style={altSectionStyle}>
+      <section id="faq" style={altSectionStyle} className="landing-alt-section">
         <SectionHeader tag="FAQ" title="Common Questions" sub="Everything you need to know before getting started." />
         <div style={L.faqList}>
           {FAQ.map(f => <FAQItem key={f.q} {...f} />)}
@@ -413,13 +416,14 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       <section style={L.ctaBanner}>
         <motion.div
           style={ctaBannerInnerStyle}
+          className="landing-cta-banner-inner"
           initial={{ opacity:0, scale:0.95 }}
           whileInView={{ opacity:1, scale:1 }}
           viewport={{ once:true }}
         >
           <div style={L.ctaBannerGlow} />
-          <h2 style={L.ctaBannerTitle}>Ready to Take Control of Your Money?</h2>
-          <p style={L.ctaBannerSub}>Join 1,200+ students building better financial habits today. It's completely free.</p>
+          <h2 style={L.ctaBannerTitle} className="landing-cta-banner-title">Ready to Take Control of Your Money?</h2>
+          <p style={L.ctaBannerSub} className="landing-cta-banner-sub">Join 1,200+ students building better financial habits today. It's completely free.</p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
             <motion.button style={L.ctaPrimary} onClick={onGetStarted} whileHover={{ scale:1.08, boxShadow: "0 20px 48px rgba(245, 158, 11, 0.35)" }} whileTap={{ scale:0.96 }}>
               🚀 Create Free Account
@@ -438,10 +442,10 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={L.footer}>
+      <footer style={L.footer} className="landing-footer">
         <div style={L.footerContainer}>
           {/* Tier 1: Links Grid */}
-          <div style={L.footerGrid}>
+          <div style={isMobile ? { ...L.footerGrid, ...L.footerGridMobile } : L.footerGrid} className="landing-footer-grid">
             <div style={L.footerMainCol}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <LogoIcon size={52} showName nameSize={22} glow />
@@ -471,7 +475,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
 
           {/* Tier 2: CTA Section */}
           <div style={L.footerTier}>
-            <div style={L.footerCtaWrap}>
+            <div style={L.footerCtaWrap} className="landing-footer-cta-wrap">
               <span style={{ fontSize:15, color:"var(--text-primary)" }}>Ready to save smart?</span>
               <motion.button 
                 style={L.footerCtaBtn} 
@@ -516,8 +520,8 @@ function SectionHeader({ tag, title, sub }) {
   return (
     <motion.div initial={{ opacity:0, y:12 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} style={{ textAlign:"center", marginBottom:40 }}>
       <span style={L.sectionTag}>{tag}</span>
-      <h2 style={L.sectionTitle}>{title}</h2>
-      {sub && <p style={L.sectionSub}>{sub}</p>}
+      <h2 style={L.sectionTitle} className="landing-section-title">{title}</h2>
+      {sub && <p style={L.sectionSub} className="landing-section-sub">{sub}</p>}
     </motion.div>
   );
 }
@@ -608,7 +612,7 @@ const L = {
   heroContent:     { maxWidth:550 },
   heroBadge:       { display:"inline-flex", alignItems:"center", gap:8, background:"var(--accent-subtle)", border:"1.5px solid var(--accent-glow)", color:"var(--accent)", padding:"6px 14px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:24, textTransform:"uppercase", letterSpacing:"0.5px" },
   heroBadgeDot:    { width:6, height:6, borderRadius:"50%", background:"var(--accent)", animation:"pulse-glow 2s infinite" },
-  heroH1:          { fontWeight:950, fontSize:64, lineHeight:1.1, margin:"0 0 24px", letterSpacing:"-3px", background:"linear-gradient(135deg, #fff 30%, var(--accent) 100%)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" },
+  heroH1:          { fontWeight:950, fontSize:64, lineHeight:1.1, margin:"0 0 24px", letterSpacing:"-3px", color:"var(--text-primary)" },
   heroSub:         { fontSize:16, color:"var(--text-secondary)", lineHeight:1.7, margin:"0 0 36px", maxWidth:480 },
   heroCTAs:        { display:"flex", gap:14, marginBottom:32, flexWrap:"wrap" },
   ctaPrimary:      { background:"linear-gradient(135deg, #f59e0b, #ea580c)", color:"#fff", border:"none", padding:"14px 32px", borderRadius:10, fontSize:15, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 8px 24px rgba(245, 158, 11, 0.3)" },

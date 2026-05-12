@@ -1,7 +1,8 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 export const getNotifications = async (req, res) => {
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('userId', req.userId)
       .query('SELECT * FROM notifications WHERE userId = @userId ORDER BY createdAt DESC');
@@ -26,6 +27,7 @@ export const getNotifications = async (req, res) => {
 
 export const createNotification = async (req, res) => {
   try {
+    const pool = await getPool();
     const { message, type, title, icon } = req.body;
     
     if (!message) {
@@ -69,6 +71,7 @@ export const createNotification = async (req, res) => {
 
 export const markRead = async (req, res) => {
   try {
+    const pool = await getPool();
     await pool.request()
       .input('userId', req.userId)
       .query('UPDATE notifications SET isRead = 1 WHERE userId = @userId');
@@ -82,6 +85,7 @@ export const markRead = async (req, res) => {
 
 export const clearNotifications = async (req, res) => {
   try {
+    const pool = await getPool();
     await pool.request()
       .input('userId', req.userId)
       .query('DELETE FROM notifications WHERE userId = @userId');
@@ -95,6 +99,7 @@ export const clearNotifications = async (req, res) => {
 
 export const deleteNotification = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     await pool.request()
       .input('id', id)

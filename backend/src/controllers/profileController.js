@@ -1,7 +1,8 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 export const getProfile = async (req, res) => {
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('id', req.userId)
       .query('SELECT id, name, email, budget, language, theme, avatar, photo, createdAt FROM users WHERE id = @id');
@@ -19,6 +20,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
+    const pool = await getPool();
     const { name, language, theme, budget, avatar, photo } = req.body;
     const request = pool.request().input('id', req.userId);
 

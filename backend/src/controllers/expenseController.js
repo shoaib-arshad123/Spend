@@ -1,7 +1,8 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 export const addExpense = async (req, res) => {
   try {
+    const pool = await getPool();
     const { amount, category, description, date, source } = req.body;
 
     if (!amount || !category || !date) {
@@ -40,6 +41,7 @@ export const addExpense = async (req, res) => {
 
 export const getExpenses = async (req, res) => {
   try {
+    const pool = await getPool();
     const { startDate, endDate, category, page = 1, limit = 50 } = req.query;
     const p = parseInt(page);
     const l = parseInt(limit);
@@ -93,6 +95,7 @@ export const getExpenses = async (req, res) => {
 
 export const deleteExpense = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
 
     const checkResult = await pool.request()
@@ -118,6 +121,7 @@ export const deleteExpense = async (req, res) => {
 
 export const clearAllExpenses = async (req, res) => {
   try {
+    const pool = await getPool();
     const { type, month } = req.query; // type: 'regular', 'goal', 'subscription'; month: 'YYYY-MM'
     let query = 'UPDATE expenses SET isHidden = 1 WHERE userId = @userId';
     
@@ -147,6 +151,7 @@ export const clearAllExpenses = async (req, res) => {
 
 export const updateExpense = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     const { amount, category, description, date } = req.body;
 
@@ -176,6 +181,7 @@ export const updateExpense = async (req, res) => {
 
 export const getExpenseStats = async (req, res) => {
   try {
+    const pool = await getPool();
     const { month, year } = req.query;
     const currentDate = new Date();
     const queryMonth = parseInt(month) || currentDate.getMonth() + 1;

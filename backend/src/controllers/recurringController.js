@@ -1,8 +1,9 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 // Get all recurring expenses for user
 export const getRecurring = async (req, res) => {
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('userId', req.userId)
       .query('SELECT * FROM recurring_expenses WHERE userId = @userId ORDER BY nextDueDate ASC');
@@ -16,6 +17,7 @@ export const getRecurring = async (req, res) => {
 // Create recurring expense
 export const createRecurring = async (req, res) => {
   try {
+    const pool = await getPool();
     const { amount, category, description, frequency, startDate } = req.body;
     if (!amount || !category || !frequency || !startDate) {
       return res.status(400).json({ success: false, message: 'Amount, category, frequency and start date are required' });
@@ -45,6 +47,7 @@ export const createRecurring = async (req, res) => {
 // Update recurring expense
 export const updateRecurring = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     const { amount, category, description, frequency, isActive, nextDueDate, lastPaidDate } = req.body;
 
@@ -78,6 +81,7 @@ export const updateRecurring = async (req, res) => {
 // Delete recurring expense
 export const deleteRecurring = async (req, res) => {
   try {
+    const pool = await getPool();
     const { id } = req.params;
     await pool.request()
       .input('id', id)
@@ -93,6 +97,7 @@ export const deleteRecurring = async (req, res) => {
 // Process due recurring expenses (auto-create expense entries)
 export const processDueRecurring = async (req, res) => {
   try {
+    const pool = await getPool();
     const today = new Date().toISOString().slice(0, 10);
 
     const dueItems = await pool.request()

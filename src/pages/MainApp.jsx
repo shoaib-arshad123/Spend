@@ -195,7 +195,7 @@ export default function MainApp({ tab = "dashboard" }) {
       {/* ── MAIN ── */}
       <div style={ms.main}>
         {/* Top bar */}
-        <header style={ms.topBar}>
+        <header style={ms.topBar} className="app-topbar">
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {!isMobile && (
               <motion.button 
@@ -207,7 +207,7 @@ export default function MainApp({ tab = "dashboard" }) {
                 <Menu size={16} />
               </motion.button>
             )}
-            <div style={ms.topBrand} className="nav-logo-group" onClick={() => handleTabChange("dashboard")} style={{ cursor:'pointer', display:'flex', alignItems:'center' }}>
+            <div className="nav-logo-group" onClick={() => handleTabChange("dashboard")} style={{ cursor:'pointer', display:'flex', alignItems:'center' }}>
               <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
                 <LogoIcon size={36} showName nameSize={18} />
               </motion.div>
@@ -222,14 +222,14 @@ export default function MainApp({ tab = "dashboard" }) {
               title="Your Rewards"
               whileHover={{ scale: 1.1, background: "var(--accent-subtle)" }} 
               whileTap={{ scale: 0.9 }}
-              className="hide-mobile"
+              className="hide-mobile app-icon-btn"
             >
               <Trophy size={16} color="var(--accent)" />
             </motion.button>
 
             {/* Notifications */}
             <div style={{ position:"relative" }}>
-              <motion.button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <motion.button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="app-icon-btn">
                 <Bell size={16} />
                 {unreadCount > 0 && (
                   <span style={{
@@ -250,7 +250,7 @@ export default function MainApp({ tab = "dashboard" }) {
             </div>
             {/* Avatar with optional verified badge */}
             <div style={{ position: "relative" }}>
-              <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <motion.button style={{ ...ms.avatarBtn, overflow:"hidden" }} onClick={() => handleTabChange("profile")} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="app-avatar-btn">
                 {user?.photo ? (
                   <img src={user.photo} alt="Avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 ) : (
@@ -293,7 +293,7 @@ export default function MainApp({ tab = "dashboard" }) {
           </motion.div>
         )}
 
-        <div style={ms.content}>
+        <div style={ms.content} className="app-content">
           <AnimatePresence mode="wait">
             {pageLoading ? (
               <motion.div key="skeleton"
@@ -324,18 +324,16 @@ export default function MainApp({ tab = "dashboard" }) {
         </div>
 
         {/* Bottom nav - Always visible as requested */}
-        <nav style={ms.bottomNav}>
+        <nav style={ms.bottomNav} className="app-bottom-nav">
           {(() => {
             // Logic for a balanced 5-item bar: [2 Left] [FAB] [2 Right/More]
-            const items = isMobile 
-              ? MOBILE_NAV.map(key => NAV.find(n => n.key === key)) 
-              : [
-                  NAV.find(n => n.key === "dashboard"),
-                  NAV.find(n => n.key === "analytics"),
-                  NAV.find(n => n.key === "addExpense"),
-                  NAV.find(n => n.key === "history"),
-                  { key: "more", icon: <MoreHorizontal size={22} />, label: "More" }
-                ];
+            const items = [
+              NAV.find(n => n.key === "dashboard"),
+              NAV.find(n => n.key === "analytics"),
+              NAV.find(n => n.key === "addExpense"),
+              NAV.find(n => n.key === "history"),
+              { key: "more", icon: <MoreHorizontal size={22} />, label: "More" }
+            ];
 
             return items.map(n => {
               if (!n) return null;
@@ -346,6 +344,7 @@ export default function MainApp({ tab = "dashboard" }) {
                     <motion.button
                       style={ms.bottomFab}
                       onClick={() => handleTabChange(n.key)}
+                      className="app-bottom-fab"
                       whileHover={{ scale: 1.15, y: -5, boxShadow: "0 12px 24px rgba(245,184,0,0.5)" }}
                       whileTap={{ scale: 0.9 }}
                     >
@@ -380,7 +379,7 @@ export default function MainApp({ tab = "dashboard" }) {
               return (
                 <motion.button
                   key={n.key}
-                  className="nav-hover"
+                  className={`nav-hover app-bottom-item${activeTab === n.key && !showMoreMenu ? " app-bottom-active" : ""}`}
                   style={{ ...ms.bottomItem, ...(activeTab === n.key && !showMoreMenu ? ms.bottomActive : {}) }}
                   onClick={() => handleTabChange(n.key)}
                   whileHover={{ y: -6 }}
@@ -416,42 +415,85 @@ export default function MainApp({ tab = "dashboard" }) {
         {/* More menu */}
         <AnimatePresence>
           {showMoreMenu && (
-            <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 30, scale: 0.95 }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              style={ms.moreMenu}
-            >
-              {(() => {
-                const shownKeys = isMobile 
-                  ? MOBILE_NAV 
-                  : ["dashboard", "analytics", "addExpense", "history"];
-                
-                const moreItems = NAV.filter(n => !shownKeys.includes(n.key));
-                
-                return moreItems.map(n => {
-                  const active = activeTab === n.key;
-                  return (
-                    <motion.button
-                      key={n.key}
-                      className="nav-hover"
-                      onClick={() => handleTabChange(n.key)}
-                      style={{ ...ms.moreItem, ...(active ? ms.moreActive : {}) }}
-                      whileTap={{ scale: 0.96 }}
-                    >
-                      <motion.div 
-                        style={{ ...ms.moreIcon, color: active ? "#111" : "var(--text-secondary)" }}
-                        whileHover={{ rotate: [0, -10, 10, 0] }}
+            <>
+              {/* Tap outside to close */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{ position:"fixed", inset:0, zIndex:198 }}
+                onClick={() => setShowMoreMenu(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 30, scale: 0.95 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                style={ms.moreMenu}
+                className="app-more-menu"
+              >
+                {/* ── Nav pages ── */}
+                {(() => {
+                  const shownKeys = ["dashboard", "analytics", "addExpense", "history"];
+                  const moreItems = NAV.filter(n => !shownKeys.includes(n.key));
+                  return moreItems.map(n => {
+                    const isActive = activeTab === n.key;
+                    return (
+                      <motion.button
+                        key={n.key}
+                        className="nav-hover"
+                        onClick={() => handleTabChange(n.key)}
+                        style={{ ...ms.moreItem, ...(isActive ? ms.moreActive : {}) }}
+                        whileTap={{ scale: 0.96 }}
                       >
-                        {n.icon}
-                      </motion.div>
-                      <span style={{ fontWeight: active ? 800 : 600, fontSize: 11 }}>{n.label}</span>
-                    </motion.button>
-                  );
-                });
-              })()}
-            </motion.div>
+                        <div style={{ ...ms.moreIcon, color: isActive ? "#111" : "var(--text-secondary)" }}>
+                          {n.icon}
+                        </div>
+                        <span style={{ fontWeight: isActive ? 800 : 600, fontSize: 11 }}>{n.label}</span>
+                      </motion.button>
+                    );
+                  });
+                })()}
+
+                {/* ── Divider ── */}
+                <div style={{
+                  gridColumn: "1 / -1",
+                  height: 1,
+                  background: "var(--border)",
+                  margin: "4px 0",
+                  borderRadius: 1,
+                }} />
+
+                {/* ── Theme toggle ── */}
+                <motion.button
+                  className="nav-hover"
+                  onClick={() => { toggleTheme(); }}
+                  style={ms.moreItem}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <div style={{ ...ms.moreIcon, color: "var(--text-secondary)" }}>
+                    {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: 11 }}>
+                    {theme === "dark" ? "Light" : "Dark"}
+                  </span>
+                </motion.button>
+
+                {/* ── Logout ── */}
+                <motion.button
+                  className="nav-hover"
+                  onClick={() => { setShowMoreMenu(false); logout(); }}
+                  style={{ ...ms.moreItem, background:"var(--red-bg)", borderColor:"rgba(239,68,68,0.25)", color:"var(--red)" }}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <div style={{ ...ms.moreIcon, color: "var(--red)" }}>
+                    <LogOut size={20} />
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: 11, color:"var(--red)" }}>Log Out</span>
+                </motion.button>
+
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
         
@@ -481,30 +523,30 @@ const ms = {
   sbNavIcon:    { width:28, height:28, borderRadius:"50%", background:"var(--bg-input)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   sbBottom:     { display:"flex", gap:6, padding:"10px 8px 12px", borderTop:"1px solid var(--border-light)" },
   sbAction:     { flex:1, background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"6px", borderRadius:8, cursor:"pointer", fontSize:11, fontWeight:500, fontFamily:"var(--font)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" },
-  main:         { flex:1, display:"flex", flexDirection:"column", minHeight:"100vh", position:"relative" },
-  topBar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", background:"var(--bg-card)", borderBottom:"1px solid var(--border-light)", position:"sticky", top:0, zIndex:100 },
+  main:         { flex:1, display:"flex", flexDirection:"column", minHeight:"100vh", position:"relative", minWidth:0 },
+  topBar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 12px", background:"var(--bg-card)", borderBottom:"1px solid var(--border-light)", position:"sticky", top:0, zIndex:100, gap:8 },
   menuBtn:      { background:"transparent", border:"none", cursor:"pointer", padding:"4px", display:"flex", flexDirection:"column" },
   backBtn:      { display:"flex", alignItems:"center", gap:4, background:"var(--accent-subtle)", border:"1px solid var(--accent)", borderRadius:8, padding:"4px 8px", cursor:"pointer", color:"var(--accent)" },
   topBrand:     { display:"flex", alignItems:"center", gap:6, marginLeft:4 },
   pageTitle:    { margin:0, fontSize:15, fontWeight:700, color:"var(--text-primary)" },
   iconBtn:      { background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-primary)", width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", flexShrink:0 },
   notifDot:     { position:"absolute", top:-4, right:-4, background:"var(--red)", color:"#fff", fontSize:9, fontWeight:700, width:14, height:14, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
-  avatarBtn:    { background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:"50%", width:32, height:32, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" },
-  budgetBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--accent-subtle)", borderBottom:"1px solid var(--accent-glow)", fontSize:12 },
+  avatarBtn:    { background:"var(--bg-elevated)", border:"1px solid var(--border)", borderRadius:"50%", width:32, height:32, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  budgetBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--accent-subtle)", borderBottom:"1px solid var(--accent-glow)", fontSize:12, flexWrap:"wrap" },
   budgetBannerBtn:{ background:"var(--accent)", border:"none", color:"#111", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap", fontFamily:"var(--font)" },
-  verifyBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--red-bg)", borderBottom:"1px solid rgba(239,68,68,0.25)", fontSize:12 },
+  verifyBanner: { display:"flex", alignItems:"center", gap:8, padding:"6px 14px", background:"var(--red-bg)", borderBottom:"1px solid rgba(239,68,68,0.25)", fontSize:12, flexWrap:"wrap" },
   verifyBannerBtn:{ background:"var(--red)", border:"none", color:"#fff", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700, whiteSpace:"nowrap", fontFamily:"var(--font)" },
-  content:      { flex:1, overflowY:"auto", paddingBottom: 80 },
-  bottomNav:    { position:"fixed", bottom:0, left:0, right:0, background:"var(--bg-card)", borderTop:"1px solid var(--border)", display:"flex", zIndex:100, height:52, alignItems:"center", padding:"0 4px", boxShadow:"0 -4px 20px rgba(0,0,0,0.2)" },
-  bottomItem:   { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"transparent", border:"none", color:"var(--text-secondary)", cursor:"pointer", fontFamily:"var(--font)", position:"relative", transition:"all 0.3s ease", height:"100%", gap:2 },
+  content:      { flex:1, overflowY:"auto", paddingBottom:"calc(80px + env(safe-area-inset-bottom, 0px))" },
+  bottomNav:    { position:"fixed", bottom:0, left:0, right:0, background:"var(--bg-card)", borderTop:"1px solid var(--border)", display:"flex", zIndex:100, height:"calc(56px + env(safe-area-inset-bottom, 0px))", alignItems:"center", paddingBottom:"env(safe-area-inset-bottom, 0px)", padding:"0 4px", boxShadow:"0 -4px 20px rgba(0,0,0,0.2)" },
+  bottomItem:   { flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"transparent", border:"none", color:"var(--text-secondary)", cursor:"pointer", fontFamily:"var(--font)", position:"relative", transition:"all 0.3s ease", height:"100%", gap:2, minWidth:0, padding:"0 2px" },
   bottomActive: { color:"var(--accent)" },
   bottomIconWrap:{ position:"relative", display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:10, transition:"all 0.3s ease" },
   bottomFabWrap:{ flex:1, display:"flex", justifyContent:"center", alignItems:"center", height:"100%" },
-  bottomFab:    { width:42, height:42, borderRadius:12, background:"linear-gradient(135deg, var(--accent), #f97316)", color:"#111", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.3)" },
+  bottomFab:    { width:44, height:44, borderRadius:14, background:"linear-gradient(135deg, var(--accent), #f97316)", color:"#111", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.3)" },
   dropdown:     { position:"absolute", top:34, right:0, background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, width:150, padding:6, zIndex:1000, boxShadow:"var(--shadow-lg)" },
   dropdownHeader:{ fontSize:10, fontWeight:700, color:"var(--text-muted)", textTransform:"uppercase", padding:"6px 10px 4px" },
   dropdownItem: { width:"100%", display:"flex", alignItems:"center", gap:8, padding:"8px 10px", background:"transparent", border:"none", color:"var(--text-primary)", borderRadius:8, cursor:"pointer", fontSize:12, textAlign:"left", fontFamily:"var(--font)", transition:"0.2s" },
-  moreMenu:     { position:"fixed", bottom:60, left:"50%", transform:"translateX(-50%)", background:"var(--bg-card)", border:"1px solid var(--border)", zIndex:99, padding:"12px", display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, borderRadius:20, width:"calc(100% - 24px)", maxWidth:400, boxShadow:"0 10px 30px rgba(0,0,0,0.5)" },
+  moreMenu:     { position:"fixed", bottom:"calc(60px + env(safe-area-inset-bottom, 0px))", left:"50%", transform:"translateX(-50%)", background:"var(--bg-card)", border:"1px solid var(--border)", zIndex:199, padding:"12px", display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, borderRadius:20, width:"calc(100% - 24px)", maxWidth:420, boxShadow:"0 -4px 40px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5)" },
   moreItem:     { display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"12px 6px", background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:12, color:"var(--text-muted)", cursor:"pointer", fontFamily:"var(--font)", fontSize:11, transition:"all 0.2s ease" },
   moreActive:   { background:"var(--accent)", color:"#111", fontWeight: 800, borderColor:"var(--bg-card)" },
   moreIcon:     { display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 },

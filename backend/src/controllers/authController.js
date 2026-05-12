@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 import nodemailer from 'nodemailer';
 
 // ─── EMAIL TRANSPORTER ────────────────────────────────────────────────────────
@@ -30,11 +30,13 @@ export const register = async (req, res) => {
   if (!email || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
 
   try {
-    // Check if email exists
+    const pool = await getPool();
+
     console.log(`[REGISTER] Checking email: ${email}`);
-    const checkRequest = pool.request().input('email', email);
-    const checkResult = await checkRequest.query('SELECT id FROM users WHERE email = @email');
-    console.log(`[REGISTER] Found ${checkResult.recordset.length} users with this email`);
+    const checkResult = await pool.request()
+      .input('email', email)
+      .query('SELECT id FROM users WHERE email = @email');
+
     if (checkResult.recordset.length > 0) {
       return res.status(400).json({ success: false, message: 'This email is already registered' });
     }
@@ -49,6 +51,7 @@ export const register = async (req, res) => {
         OUTPUT INSERTED.id, INSERTED.email, INSERTED.name, INSERTED.avatar, INSERTED.photo
         VALUES (@email, @password, @name)
       `);
+
     const user = result.recordset[0];
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ success: true, token, user });
@@ -62,9 +65,13 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
 
-  const request = pool.request().input('email', email);
   try {
-    const result = await request.query('SELECT * FROM users WHERE email = @email');
+    const pool = await getPool();
+
+    const result = await pool.request()
+      .input('email', email)
+      .query('SELECT * FROM users WHERE email = @email');
+
     const user = result.recordset[0];
     if (!user) return res.status(401).json({ success: false, message: 'invalid candidate' });
 
@@ -93,9 +100,12 @@ export const login = async (req, res) => {
 };
 
 export const getCurrentUser = async (req, res) => {
-  const request = pool.request().input('id', req.userId);
   try {
-    const result = await request.query('SELECT id, email, name, budget, avatar, photo, phone, isEmailVerified, isPhoneVerified FROM users WHERE id = @id');
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', req.userId)
+      .query('SELECT id, email, name, budget, avatar, photo, phone, isEmailVerified, isPhoneVerified FROM users WHERE id = @id');
+
     const user = result.recordset[0];
     if (user) {
       user.isEmailVerified = user.isEmailVerified === true || user.isEmailVerified === 1;
@@ -108,15 +118,14 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
-// --- SECURITY & VERIFICATION ---
-
 export const sendOTP = async (req, res) => {
-  const { type, value } = req.body; // type: 'email' | 'phone', value: the actual email or phone
+  const { type, value } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 10 * 60000); // 10 mins
+  const expires = new Date(Date.now() + 10 * 60000);
 
   try {
-    const updateQuery = type === 'phone' 
+    const pool = await getPool();
+    const updateQuery = type === 'phone'
       ? 'UPDATE users SET otp = @otp, otpExpires = @expires, phone = @val WHERE id = @id'
       : 'UPDATE users SET otp = @otp, otpExpires = @expires WHERE id = @id';
 
@@ -134,6 +143,7 @@ export const sendOTP = async (req, res) => {
 
     res.json({ success: true, message: `OTP sent to your ${type}` });
   } catch (err) {
+    console.error('SEND OTP ERROR', err);
     res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }
 };
@@ -141,12 +151,12 @@ export const sendOTP = async (req, res) => {
 export const verifyOTP = async (req, res) => {
   const { type, otp } = req.body;
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('id', req.userId)
       .input('otp', otp)
-      .input('now', new Date())
       .query('SELECT otpExpires FROM users WHERE id = @id AND otp = @otp');
-    
+
     if (result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid verification code' });
     }
@@ -160,17 +170,19 @@ export const verifyOTP = async (req, res) => {
 
     res.json({ success: true, message: `${type} verified successfully` });
   } catch (err) {
+    console.error('VERIFY OTP ERROR', err);
     res.status(500).json({ success: false, message: 'Verification failed' });
   }
 };
 
 export const forgotPassword = async (req, res) => {
-  const { identity } = req.body; // email or phone
+  const { identity } = req.body;
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('ident', identity)
       .query('SELECT id, email, phone FROM users WHERE email = @ident OR phone = @ident');
-    
+
     const user = result.recordset[0];
     if (!user) return res.status(404).json({ success: false, message: 'Wrong email address' });
 
@@ -190,6 +202,7 @@ export const forgotPassword = async (req, res) => {
 
     res.json({ success: true, message: 'Recovery OTP sent' });
   } catch (err) {
+    console.error('FORGOT PASSWORD ERROR', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -197,11 +210,12 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   const { identity, otp, newPassword } = req.body;
   try {
+    const pool = await getPool();
     const result = await pool.request()
       .input('ident', identity)
       .input('otp', otp)
       .query('SELECT id, otpExpires FROM users WHERE (email = @ident OR phone = @ident) AND otp = @otp');
-    
+
     if (result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid recovery code' });
     }
@@ -217,6 +231,7 @@ export const resetPassword = async (req, res) => {
 
     res.json({ success: true, message: 'Password reset successful' });
   } catch (err) {
+    console.error('RESET PASSWORD ERROR', err);
     res.status(500).json({ success: false, message: 'Failed to reset password' });
   }
 };
@@ -224,20 +239,26 @@ export const resetPassword = async (req, res) => {
 export const changePassword = async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   try {
-    const result = await pool.request().input('id', req.userId).query('SELECT password FROM users WHERE id = @id');
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id', req.userId)
+      .query('SELECT password FROM users WHERE id = @id');
+
     const user = result.recordset[0];
-    
     const match = await bcrypt.compare(oldPassword, user.password);
     if (!match) {
-      console.log(`[AUTH] Password mismatch for user ${req.userId}`);
       return res.status(400).json({ success: false, message: 'Incorrect old password' });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await pool.request().input('id', req.userId).input('pass', hashed).query('UPDATE users SET password = @pass WHERE id = @id');
+    await pool.request()
+      .input('id', req.userId)
+      .input('pass', hashed)
+      .query('UPDATE users SET password = @pass WHERE id = @id');
 
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (err) {
+    console.error('CHANGE PASSWORD ERROR', err);
     res.status(500).json({ success: false, message: 'Failed to change password' });
   }
 };

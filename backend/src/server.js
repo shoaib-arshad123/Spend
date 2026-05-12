@@ -2,9 +2,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Import pool so the DB connection is established when the module loads
-import { pool } from './config/database.js';
+// Import getPool so the DB connection is established when the module loads
+import { getPool } from './config/database.js';
 
 import authRoutes from './routes/authRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
@@ -19,30 +21,57 @@ import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 4444;
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Allow requests from the frontend — supports multiple origins for local + prod
+const allowedOrigins = [
+  'http://localhost:5173',   // Vite dev server
+  'http://localhost:4173',   // Vite preview
+  'http://localhost:3000',   // Alternative local port
+  process.env.FRONTEND_URL,  // Set this in your deployment env vars
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // In development, allow all origins
+    if (!IS_PROD) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // ─── GLOBAL MIDDLEWARE ────────────────────────────────────────────────────────
-// Rate Limiting: Disabled for development, can be enabled later
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Very high limit for development
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  windowMs: 15 * 60 * 1000,
+  max: IS_PROD ? 500 : 10000,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' }
 });
 
-app.use(cors());
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  next();
-});
+if (!IS_PROD) {
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+  });
+}
 
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
+// ─── API ROUTES ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/budget', budgetRoutes);
@@ -53,7 +82,27 @@ app.use('/api/recurring', recurringRoutes);
 app.use('/api/goals', goalsRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ success: true, message: 'Server is running' }));
+app.get('/health', (_req, res) => res.json({
+  success: true,
+  message: 'Server is running',
+  env: process.env.NODE_ENV || 'development',
+  timestamp: new Date().toISOString()
+}));
+
+// ─── SERVE FRONTEND IN PRODUCTION ─────────────────────────────────────────────
+// When deployed as a single service (backend serves the built frontend too),
+// uncomment the block below and set SERVE_FRONTEND=true in your env.
+// This is optional — skip if your frontend is deployed separately (Vercel/Netlify).
+if (process.env.SERVE_FRONTEND === 'true') {
+  const frontendDist = path.join(__dirname, '../../dist');
+  app.use(express.static(frontendDist));
+  // All non-API routes serve the React app (client-side routing)
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      res.sendFile(path.join(frontendDist, 'index.html'));
+    }
+  });
+}
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) =>
@@ -68,22 +117,18 @@ app.use((err, req, res, next) => {
 });
 
 // ─── START SERVER ─────────────────────────────────────────────────────────────
-// pool.connect() is already called inside database.js; we wait for the pool
-// to be ready before accepting HTTP traffic.
-pool.on('connect', () => {
-  // fires each time a new connection is added to the pool
-});
-
-// Give the pool 3 seconds to connect, then start regardless so
-// the process doesn't hang if MSSQL is temporarily unavailable.
 setTimeout(() => {
   app.listen(PORT, () => {
-    console.log('');
-    console.log('  ┌─────────────────────────────────────────────┐');
-    console.log(`  │  🚀  SpendSmart API   http://localhost:${PORT}  │`);
-    console.log('  │  📊  Database : MSSQL (pool)                │');
-    console.log(`  │  🌐  CORS for : ${(process.env.FRONTEND_URL || 'http://localhost:5173').padEnd(28)}│`);
-    console.log('  └─────────────────────────────────────────────┘');
-    console.log('');
+    if (!IS_PROD) {
+      console.log('');
+      console.log('  ┌─────────────────────────────────────────────┐');
+      console.log(`  │  🚀  SpendSmart API   http://localhost:${PORT}  │`);
+      console.log('  │  📊  Database : MSSQL (pool)                │');
+      console.log(`  │  🌐  CORS for : ${(process.env.FRONTEND_URL || 'http://localhost:5173').padEnd(28)}│`);
+      console.log('  └─────────────────────────────────────────────┘');
+      console.log('');
+    } else {
+      console.log(`✅ SpendSmart API running on port ${PORT} [production]`);
+    }
   });
 }, 1500);

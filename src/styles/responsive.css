@@ -1,10 +1,18 @@
-/* Responsive Utilities */
+/* ============================================================
+   RESPONSIVE CSS — SpendSmart
+   Covers: Landing Page, App Shell, Dashboard, All Components
+   ============================================================ */
+
 :root {
   --container-max-width: 1200px;
   --section-padding: 80px 24px;
   --section-padding-mobile: 40px 16px;
+  /* iOS safe area support */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
+/* ── Base Container ── */
 .container {
   width: 100%;
   max-width: var(--container-max-width);
@@ -12,21 +20,11 @@
   padding: 0 24px;
 }
 
-@media (max-width: 768px) {
-  .container {
-    padding: 0 16px;
-  }
-  
-  .hide-mobile {
-    display: none !important;
-  }
+/* ── Utility Classes ── */
+.hide-mobile { display: flex !important; }
+.show-mobile { display: none !important; }
 
-  body {
-    font-size: 14px;
-  }
-}
-
-/* Landing Page Specific Responsiveness */
+/* ── Landing Page Typography ── */
 .hero-title {
   font-size: clamp(32px, 8vw, 64px);
   line-height: 1.1;
@@ -35,66 +33,59 @@
 }
 
 .section-title {
-  font-size: clamp(24px, 5vw, 42px);
+  font-size: clamp(22px, 5vw, 42px);
   line-height: 1.2;
 }
 
-/* Grid Utilities */
+/* ── Grid Utilities ── */
 .responsive-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--min-width, 280px), 1fr));
   gap: 24px;
 }
 
-@media (max-width: 768px) {
-  .responsive-grid {
-    grid-template-columns: repeat(auto-fit, minmax(var(--min-width-mobile, 140px), 1fr));
-    gap: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .responsive-grid {
-    grid-template-columns: repeat(auto-fit, minmax(var(--min-width-mobile, 100%), 1fr));
-    gap: 16px;
-  }
-}
-
-/* Dashboard specific */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-@media (max-width: 600px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Navbar fixes */
-@media (max-width: 768px) {
-  .nav-inner {
-    padding: 10px 16px !important;
-  }
-  
-  .nav-logo-text {
-    font-size: 16px !important;
-  }
-  
-  .nav-cta-group {
-    gap: 6px !important;
-  }
-}
-
-/* Footer fixes */
+/* ── Footer Grid ── */
 .footer-grid {
   display: grid;
   grid-template-columns: 1.5fr repeat(3, 1fr);
   gap: 40px;
 }
 
+/* ── Chart Containers ── */
+.recharts-responsive-container {
+  min-height: 150px;
+}
+
+/* ── Aspect Ratio ── */
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+/* ── Dashboard Grid ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ============================================================
+   APP SHELL — Bottom Nav & Safe Areas
+   ============================================================ */
+
+/* Bottom nav safe area for iOS */
+.bottom-nav-safe {
+  padding-bottom: calc(4px + var(--safe-bottom)) !important;
+  height: calc(56px + var(--safe-bottom)) !important;
+}
+
+/* Content area padding to clear bottom nav + safe area */
+.content-safe {
+  padding-bottom: calc(80px + var(--safe-bottom)) !important;
+}
+
+/* ============================================================
+   TABLET — 1024px and below
+   ============================================================ */
 @media (max-width: 1024px) {
   .footer-grid {
     grid-template-columns: 1fr 1fr;
@@ -102,42 +93,412 @@
   }
 }
 
-@media (max-width: 600px) {
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
+/* ============================================================
+   TABLET/MOBILE — 768px and below
+   ============================================================ */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
   }
-}
 
-/* Chart container responsiveness */
-.recharts-responsive-container {
-  min-height: 150px;
-}
-
-@media (max-width: 480px) {
-  .recharts-responsive-container {
-    min-height: 120px;
+  .hide-mobile {
+    display: none !important;
   }
-}
 
-/* Utility for aspect ratio containers */
-.aspect-video {
-  aspect-ratio: 16 / 9;
-}
+  .show-mobile {
+    display: flex !important;
+  }
 
-/* Button scaling */
-@media (max-width: 480px) {
-  .btn-scale {
+  body {
+    font-size: 14px;
+  }
+
+  /* Navbar */
+  .nav-inner {
     padding: 10px 16px !important;
+  }
+  .nav-logo-text {
+    font-size: 16px !important;
+  }
+  .nav-cta-group {
+    gap: 6px !important;
+  }
+
+  /* Responsive grid tighter on tablet */
+  .responsive-grid {
+    grid-template-columns: repeat(auto-fit, minmax(var(--min-width-mobile, 140px), 1fr));
+    gap: 12px;
+  }
+
+  /* Dashboard grid single column */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── APP SHELL ── */
+
+  /* Top bar */
+  .app-topbar {
+    padding: 6px 10px !important;
+  }
+
+  /* Content area — account for bottom nav + iOS safe area */
+  .app-content {
+    padding-bottom: calc(72px + var(--safe-bottom)) !important;
+  }
+
+  /* Bottom nav */
+  .app-bottom-nav {
+    height: calc(56px + var(--safe-bottom)) !important;
+    padding-bottom: var(--safe-bottom) !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+
+  /* More menu — full width on mobile */
+  .app-more-menu {
+    width: calc(100% - 16px) !important;
+    left: 8px !important;
+    transform: none !important;
+    bottom: calc(60px + var(--safe-bottom)) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
+
+  /* ── DASHBOARD ── */
+
+  /* Budget card — remove excessive horizontal padding */
+  .dashboard-budget-card {
+    padding: 16px !important;
+  }
+
+  /* AI insights card */
+  .dashboard-ai-card {
+    padding: 14px !important;
+  }
+
+  /* Stats row — 2 columns on mobile */
+  .dashboard-stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Charts grid — single column */
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Stat card values — slightly smaller */
+  .dashboard-stat-value {
+    font-size: 15px !important;
+  }
+
+  /* Recent row text */
+  .dashboard-recent-note {
+    font-size: 12px !important;
+  }
+
+  /* Alert banner */
+  .dashboard-alert-banner {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* ── LANDING PAGE ── */
+
+  /* Hero section */
+  .landing-hero {
+    grid-template-columns: 1fr !important;
+    padding: 100px 20px 60px !important;
+    text-align: center !important;
+    gap: 32px !important;
+    min-height: auto !important;
+  }
+
+  .landing-hero-visual {
+    display: none !important;
+  }
+
+  .landing-hero-ctas {
+    justify-content: center !important;
+  }
+
+  .landing-hero-trust {
+    justify-content: center !important;
+  }
+
+  /* Stats grid — 2 columns */
+  .landing-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Sections */
+  .landing-section {
+    padding: 60px 20px !important;
+  }
+
+  .landing-alt-section {
+    padding: 60px 20px !important;
+  }
+
+  /* Features grid */
+  .landing-feat-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-top: 32px !important;
+  }
+
+  /* Steps row */
+  .landing-steps-row {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    margin-top: 32px !important;
+  }
+
+  /* Testimonials */
+  .landing-test-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-top: 32px !important;
+  }
+
+  /* CTA banner */
+  .landing-cta-banner-inner {
+    padding: 40px 20px !important;
+    border-radius: 24px !important;
+    margin: 0 8px !important;
+  }
+
+  .landing-cta-banner-title {
+    font-size: 28px !important;
+    letter-spacing: -1px !important;
+  }
+
+  .landing-cta-banner-sub {
+    font-size: 15px !important;
+  }
+
+  /* Footer */
+  .landing-footer {
+    padding: 60px 20px 40px !important;
+  }
+
+  .landing-footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 32px !important;
+  }
+
+  .landing-footer-cta-wrap {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Section headers */
+  .landing-section-title {
+    font-size: 28px !important;
+    letter-spacing: -1px !important;
+  }
+
+  .landing-section-sub {
     font-size: 14px !important;
   }
 }
 
-/* Mobile text truncation */
-.text-truncate-mobile {
-  @media (max-width: 600px) {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* ============================================================
+   SMALL MOBILE — 480px and below
+   ============================================================ */
+@media (max-width: 480px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .recharts-responsive-container {
+    min-height: 120px;
+  }
+
+  /* Button scaling */
+  .btn-scale {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+  }
+
+  /* ── APP SHELL ── */
+
+  /* Bottom nav items — tighter */
+  .app-bottom-item {
+    gap: 1px !important;
+  }
+
+  .app-bottom-item span {
+    font-size: 9px !important;
+  }
+
+  .app-bottom-fab {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Top bar */
+  .app-topbar {
+    padding: 5px 8px !important;
+  }
+
+  .app-icon-btn {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .app-avatar-btn {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  /* ── DASHBOARD ── */
+
+  /* All-time stats — 2 columns */
+  .dashboard-alltime-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Stat card padding */
+  .dashboard-stat-card {
+    padding: 10px !important;
+  }
+
+  /* Budget card values */
+  .dashboard-budget-value {
+    font-size: 18px !important;
+  }
+
+  /* Chart card padding */
+  .dashboard-chart-card {
+    padding: 12px !important;
+  }
+
+  /* Recent row */
+  .dashboard-recent-row {
+    gap: 8px !important;
+    padding: 8px 0 !important;
+  }
+
+  .dashboard-recent-icon {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+  }
+
+  .dashboard-recent-amt {
+    font-size: 12px !important;
+  }
+
+  /* AI insights card — stack vertically */
+  .dashboard-ai-inner {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .dashboard-ai-score {
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+    padding-left: 0 !important;
+    padding-top: 12px !important;
+    text-align: left !important;
+  }
+
+  /* ── LANDING PAGE ── */
+
+  .landing-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .landing-stat-card {
+    padding: 20px 12px !important;
+  }
+
+  .landing-stat-num {
+    font-size: 28px !important;
+  }
+
+  .landing-feat-card {
+    padding: 24px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .landing-step-card {
+    padding: 32px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .landing-test-card {
+    padding: 24px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .landing-footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  .landing-cta-banner-inner {
+    padding: 32px 16px !important;
+    border-radius: 20px !important;
+  }
+
+  .landing-cta-banner-title {
+    font-size: 24px !important;
+  }
+
+  /* FAQ */
+  .landing-faq-q {
+    padding: 16px 20px !important;
+    font-size: 14px !important;
+  }
+
+  .landing-faq-a {
+    padding: 0 20px 16px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ============================================================
+   VERY SMALL — 360px and below
+   ============================================================ */
+@media (max-width: 360px) {
+  .app-more-menu {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+
+  .dashboard-stats-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .dashboard-alltime-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  .landing-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* ============================================================
+   FOOTER — Standalone (used by landing page footer-grid class)
+   ============================================================ */
+@media (max-width: 600px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 }

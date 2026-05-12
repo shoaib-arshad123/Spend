@@ -1,7 +1,8 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 export const getCategories = async (req, res) => {
   try {
+    const pool = await getPool();
     const request = pool.request();
 
     let query;
@@ -22,6 +23,7 @@ export const getCategories = async (req, res) => {
 
 export const createCategory = async (req, res) => {
   try {
+    const pool = await getPool();
     const { name, icon } = req.body;
     const userId = req.userId;
 

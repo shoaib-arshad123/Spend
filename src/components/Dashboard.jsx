@@ -230,7 +230,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
           <div style={{ width: 4, height: 16, background: "var(--accent)", borderRadius: 2 }} />
           <h3 style={{ ...D.chartTitle, margin: 0, fontSize: 13, textTransform: "uppercase", letterSpacing: 1 }}>All-Time Analytics</h3>
         </div>
-        <div style={D.statsRow}>
+        <div style={D.statsRow} className="dashboard-stats-row dashboard-alltime-row">
           {[
             { icon: "💰", label: "All-Time Spent", value: formatPKR(allTimeTotal), color: "var(--red)", sub: "Total Volume" },
             { icon: "📅", label: "Days Tracked", value: `${totalTrackingDays}`, color: "var(--blue)", sub: "Since Start" },
@@ -238,12 +238,12 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
             { icon: "📈", label: "Total Budget", value: formatPKR(allTimeBudget), color: "var(--green)", sub: "Planned" },
             { icon: "📊", label: "Avg / Month", value: formatPKR(Math.round(allTimeTotal / Math.max(1, Math.ceil(totalTrackingDays/30)))), color: "var(--purple)", sub: "Spending" },
           ].map((s, i) => (
-            <TiltCard key={s.label} style={D.statCard} delay={i * 0.05}>
+            <TiltCard key={s.label} style={D.statCard} className="dashboard-stat-card" delay={i * 0.05}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <span style={{ fontSize: 20 }}>{s.icon}</span>
                 <span style={{ fontSize: 9, color: "var(--text-muted)", background: "var(--bg-input)", padding: "2px 7px", borderRadius: 10, fontWeight: 700 }}>{s.sub}</span>
               </div>
-              <p style={{ ...D.statValue, color: s.color, fontSize: 16, marginTop: 8 }}>{s.value}</p>
+              <p style={{ ...D.statValue, color: s.color, fontSize: 16, marginTop: 8 }} className="dashboard-stat-value">{s.value}</p>
               <p style={D.statLabel}>{s.label}</p>
             </TiltCard>
           ))}
@@ -251,7 +251,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
       </div>
 
       {/* ── Monthly Budget card ── */}
-      <TiltCard style={{ ...D.budgetCard, padding: "20px 48px" }} delay={0.1}>
+      <TiltCard style={D.budgetCard} className="dashboard-budget-card" delay={0.1}>
         <div style={D.budgetTop}>
           <div>
             <p style={D.budgetLabel}>This Month's Budget</p>
@@ -297,7 +297,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
 
       {/* ── AI Analysis Summary Card ── */}
       {expenses.length >= 3 && (
-        <TiltCard style={{ ...D.overviewCard, padding: "18px 48px", background:"linear-gradient(135deg, var(--bg-card), var(--bg-input))", border:"1px solid var(--accent-subtle)" }} delay={0.15}>
+        <TiltCard style={{ ...D.overviewCard, background:"linear-gradient(135deg, var(--bg-card), var(--bg-input))", border:"1px solid var(--accent-subtle)" }} className="dashboard-ai-card" delay={0.15}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <div style={{ width:36, height:36, borderRadius:"50%", background:"var(--accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -308,7 +308,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
             <motion.button style={D.smallBtn} onClick={() => setActiveTab("advice")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>Deep Analysis</motion.button>
           </div>
           
-          <div style={{ display:"flex", gap:20, alignItems:"center", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:20, alignItems:"center", flexWrap:"wrap" }} className="dashboard-ai-inner">
             <div style={{ flex:1, minWidth:200 }}>
               <div style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
                 <Lightbulb size={14} color="var(--accent)" />
@@ -319,7 +319,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               </p>
             </div>
             
-            <div style={{ textAlign:"right", paddingLeft:16, borderLeft:"1px solid var(--border)" }}>
+            <div style={{ textAlign:"right", paddingLeft:16, borderLeft:"1px solid var(--border)" }} className="dashboard-ai-score">
               <div style={{ fontSize:11, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:1 }}>Spending Score</div>
               <div style={{ fontSize:28, fontWeight:900, color: pct<60?"var(--green)":pct<90?"var(--accent)":"var(--red)", marginTop:2 }}>
                 {Math.max(0, 100 - Math.round(pct))}<span style={{ fontSize:14, fontWeight:600, opacity:0.7 }}>/100</span>
@@ -330,7 +330,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
       )}
 
       {/* ── Financial Health: Goals & Subscriptions ── */}
-      <div style={D.chartsGrid}>
+      <div style={D.chartsGrid} className="dashboard-charts-grid">
         {/* Goals Progress Card */}
         <TiltCard style={D.overviewCard} delay={0.2}>
           <div style={D.cardHeader}>
@@ -396,27 +396,27 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
       </div>
 
       {/* ── Stat cards ── */}
-      <div style={D.statsRow}>
+      <div style={D.statsRow} className="dashboard-stats-row">
         {[
           { icon:"💸", label:"Month Spent",  value:formatPKR(totalSpent), color:"var(--red)",    sub:`${monthlyExpenses.length} this month` },
           { icon:"💰", label:t.remaining,     value:formatPKR(Math.max(remaining,0)), color:"var(--green)", sub: pct>=100 ? "Budget exceeded!" : `${100-pct}% free` },
           { icon:"📊", label:"Avg / Day",     value:formatPKR(Math.round(totalSpent/Math.max(new Date().getDate(),1))), color:"var(--blue)", sub:"This month" },
           { icon:"🔥", label:"Day Streak",    value:`${computeStreak(expenses)} days`, color:"var(--orange)", sub:"Keep it up!" },
         ].map((s,i) => (
-          <TiltCard key={s.label} style={D.statCard} delay={0.2 + i * 0.05}>
+          <TiltCard key={s.label} style={D.statCard} className="dashboard-stat-card" delay={0.2 + i * 0.05}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <span style={{ fontSize:22 }}>{s.icon}</span>
               <span style={{ fontSize:10, color:"var(--text-muted)", background:"var(--bg-input)", padding:"2px 7px", borderRadius:10 }}>{s.sub}</span>
             </div>
-            <p style={{ ...D.statValue, color:s.color }}>{s.value}</p>
+            <p style={{ ...D.statValue, color:s.color }} className="dashboard-stat-value">{s.value}</p>
             <p style={D.statLabel}>{s.label}</p>
           </TiltCard>
         ))}
       </div>
 
       {/* ── Charts row ── */}
-      <div style={D.chartsGrid}>
-        <TiltCard style={D.chartCard} delay={0.3}>
+      <div style={D.chartsGrid} className="dashboard-charts-grid">
+        <TiltCard style={D.chartCard} className="dashboard-chart-card" delay={0.3}>
           <h3 style={D.chartTitle}>📅 Last 7 Days</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={barData} margin={{ top:4, right:6, left:-24, bottom:0 }}>
@@ -434,7 +434,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         </TiltCard>
 
         {/* Donut with per-category colors & tooltip */}
-        <TiltCard style={D.chartCard} delay={0.4}>
+        <TiltCard style={D.chartCard} className="dashboard-chart-card" delay={0.4}>
           <h3 style={D.chartTitle}>🥧 {t.categoryBreakdown}</h3>
           {pieData.length > 0 ? (
             <>
@@ -459,7 +459,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
           ) : <EmptyState icon="🥧" title="No data yet" desc="Add expenses to see category breakdown" />}
         </TiltCard>
 
-        <TiltCard style={D.chartCard} delay={0.5}>
+        <TiltCard style={D.chartCard} className="dashboard-chart-card" delay={0.5}>
           <h3 style={D.chartTitle}>📊 Top Spending Categories</h3>
           {topCategories.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -516,7 +516,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
 
       {/* ── Monthly History Summary ── */}
       {monthlyBreakdown.length > 1 && (
-        <TiltCard style={D.chartCard} delay={0.6}>
+        <TiltCard style={D.chartCard} className="dashboard-chart-card" delay={0.6}>
           <h3 style={D.chartTitle}>📆 Monthly Spending History</h3>
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {monthlyBreakdown.slice(0, 6).map((mo, i) => {
@@ -548,7 +548,7 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
       )}
 
       {/* ── Recent expenses ── */}
-      <TiltCard style={D.chartCard} delay={0.7}>
+      <TiltCard style={D.chartCard} className="dashboard-chart-card" delay={0.7}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <h3 style={D.chartTitle}>{t.recentExpenses}</h3>
           <motion.button style={D.viewAllBtn} onClick={() => setActiveTab("history")} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}>{t.viewAll} →</motion.button>
@@ -556,15 +556,15 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         {recent.length === 0 ? (
           <EmptyState icon="📭" title="No expenses yet" desc="Add your first expense to see it here" action="➕ Add Expense" onAction={() => setActiveTab("addExpense")} />
         ) : recent.map(exp => (
-          <div key={exp.id} style={D.recentRow}>
-            <div style={{ ...D.recentIcon, background:"var(--bg-elevated)" }}>
+          <div key={exp.id} style={D.recentRow} className="dashboard-recent-row">
+            <div style={{ ...D.recentIcon, background:"var(--bg-elevated)" }} className="dashboard-recent-icon">
               <span style={{ fontSize:18 }}>{getIcon(exp.category)}</span>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <p style={D.recentNote}>{exp.description || exp.category}</p>
-              <p style={D.recentMeta}>TXN-{exp.id} · {new Date(exp.date).toLocaleDateString()} · {new Date(exp.createdAt || exp.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              <p style={D.recentNote} className="dashboard-recent-note">{exp.description || exp.category}</p>
+              <p style={D.recentMeta}>{`TXN-${exp.id}`} · {new Date(exp.date).toLocaleDateString()} · {new Date(exp.createdAt || exp.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
-            <span style={D.recentAmt}>−{formatPKR(exp.amount)}</span>
+            <span style={D.recentAmt} className="dashboard-recent-amt">−{formatPKR(exp.amount)}</span>
           </div>
         ))}
       </TiltCard>
@@ -586,7 +586,7 @@ function computeStreak(expenses) {
 }
 
 const D = {
-  container:      { padding:"12px 16px", display:"flex", flexDirection:"column", gap:12, maxWidth:900, margin:"0 auto", position: "relative" },
+  container:      { padding:"12px 16px", display:"flex", flexDirection:"column", gap:12, maxWidth:900, margin:"0 auto", position: "relative", width:"100%", boxSizing:"border-box" },
   rolloverNotice: { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", color:"var(--text-primary)", fontSize:12, display:"flex", alignItems:"center", gap:8, backdropFilter:"blur(12px)" },
   welcomeCard:    { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"20px 16px", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:12, backdropFilter:"blur(12px)" },
   welcomeTitle:   { margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.5px" },
@@ -595,9 +595,9 @@ const D = {
   welcomeBtnOutline:{ background:"var(--bg-input)", border:"1px solid var(--border)", color:"var(--text-secondary)", padding:"10px 20px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"var(--font)", fontWeight:600 },
   quickTips:      { display:"flex", flexDirection:"column", gap:8, marginTop:12, width:"100%", maxWidth:380 },
   quickTip:       { background:"var(--bg-input)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", fontSize:12, color:"var(--text-secondary)", textAlign:"left", fontWeight:500 },
-  // Budget card
+  // Budget card — responsive padding via CSS class
   budgetCard:     { background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, padding:"18px 20px", backdropFilter:"blur(12px)" },
-  budgetTop:      { display:"flex", justifyContent:"space-between", marginBottom:14 },
+  budgetTop:      { display:"flex", justifyContent:"space-between", marginBottom:14, gap:8, flexWrap:"wrap" },
   budgetLabel:    { margin:"0 0 4px", fontSize:11, color:"var(--text-muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em" },
   budgetValue:    { margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.5px" },
   progressTrack:  { height:10, background:"var(--border)", borderRadius:8, overflow:"hidden", marginBottom:12 },
@@ -611,15 +611,15 @@ const D = {
   goalsList:      { display:"flex", flexDirection:"column", gap:10 },
   goalItem:       { },
   goalTop:        { display:"flex", alignItems:"center", gap:8, marginBottom:4 },
-  goalName:       { flex:1, fontSize:13, fontWeight:700, color:"var(--text-primary)" },
-  goalPct:        { fontSize:12, fontWeight:800, color:"var(--accent)" },
+  goalName:       { flex:1, fontSize:13, fontWeight:700, color:"var(--text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  goalPct:        { fontSize:12, fontWeight:800, color:"var(--accent)", flexShrink:0 },
   progressBarBg:  { height:6, background:"var(--border)", borderRadius:4, overflow:"hidden" },
   progressBar:    { height:"100%", borderRadius:4 },
   goalSub:        { margin:"4px 0 0", fontSize:10, color:"var(--text-muted)", fontWeight:500 },
   subsList:       { display:"flex", flexDirection:"column", gap:10 },
   subItem:        { display:"flex", alignItems:"center", gap:10, padding:"8px", background:"var(--bg-input)", borderRadius:10, border:"1px solid var(--border-light)" },
-  subIcon:        { width:32, height:32, background:"var(--bg-elevated)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 },
-  subName:        { margin:0, fontSize:13, fontWeight:800, color:"var(--text-primary)" },
+  subIcon:        { width:32, height:32, background:"var(--bg-elevated)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 },
+  subName:        { margin:0, fontSize:13, fontWeight:800, color:"var(--text-primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   subDetail:      { margin:0, fontSize:10, color:"var(--text-muted)", fontWeight:500 },
   subStatus:      { margin:0, fontSize:10, fontWeight:800 },
   subDate:        { margin:0, fontSize:9, color:"var(--text-muted)", fontWeight:500 },
@@ -633,7 +633,7 @@ const D = {
   recentRow:      { display:"flex", alignItems:"center", gap:10, padding:"10px 0", borderBottom:"1px solid var(--border-light)" },
   recentIcon:     { width:36, height:36, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:16 },
   recentNote:     { margin:0, fontSize:13, color:"var(--text-primary)", fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  recentMeta:     { margin:"2px 0 0", fontSize:11, color:"var(--text-muted)", fontWeight:500 },
+  recentMeta:     { margin:"2px 0 0", fontSize:11, color:"var(--text-muted)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   recentAmt:      { fontSize:14, color:"var(--red)", fontWeight:800, whiteSpace:"nowrap", flexShrink:0, letterSpacing:"-0.5px" },
   viewAllBtn:     { background:"transparent", border:"none", color:"var(--accent)", fontSize:12, cursor:"pointer", fontWeight:700, fontFamily:"var(--font)" },
   alertBanner: {
@@ -647,5 +647,6 @@ const D = {
     cursor: "pointer",
     boxShadow: "0 8px 20px -5px rgba(245, 158, 11, 0.4)",
     border: "1px solid rgba(255, 255, 255, 0.2)",
+    gap: 8,
   }
 };

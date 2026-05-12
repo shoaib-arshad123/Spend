@@ -1,7 +1,8 @@
-import { pool } from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 export const setBudget = async (req, res) => {
   try {
+    const pool = await getPool();
     const { amount } = req.body;
 
     if (!amount || amount <= 0) {
@@ -65,6 +66,7 @@ export const setBudget = async (req, res) => {
 
 export const getBudget = async (req, res) => {
   try {
+    const pool = await getPool();
     const userResult = await pool.request()
       .input('userId', req.userId)
       .query('SELECT budget FROM users WHERE id = @userId');
@@ -108,6 +110,7 @@ export const getBudget = async (req, res) => {
 
 export const getBudgetHistory = async (req, res) => {
   try {
+    const pool = await getPool();
     const historyResult = await pool.request()
       .input('userId', req.userId)
       .query('SELECT month, year, amount FROM budgets WHERE userId = @userId ORDER BY year, month');
