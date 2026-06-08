@@ -180,7 +180,16 @@ const buildAuthUser = async (session, authUser, email, name) => {
   }
 };
 
+const isRateLimitError = (error) => {
+  const msg = (error?.message || String(error || '')).toLowerCase();
+  return msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('email rate');
+};
+
+const mapRateLimitError = () =>
+  fail('Too many emails sent. Please wait 30–60 minutes, or disable "Confirm email" in Supabase Auth settings.');
+
 const mapLoginError = async (email, error) => {
+  if (isRateLimitError(error)) return mapRateLimitError();
   const msg = (error?.message || '').toLowerCase();
   if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
     const exists = await emailExists(email);
@@ -196,6 +205,7 @@ const mapLoginError = async (email, error) => {
 };
 
 const mapRegisterError = (error) => {
+  if (isRateLimitError(error)) return mapRateLimitError();
   const msg = (error?.message || '').toLowerCase();
   if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
     return fail('This email is already registered. Try signing in instead.');
@@ -289,7 +299,7 @@ export const authApi = {
         email: value,
         options: { shouldCreateUser: false },
       });
-      if (error) return fail(error.message);
+      if (error) return isRateLimitError(error) ? mapRateLimitError() : fail(error.message);
       return ok({ message: 'OTP sent to your email' });
     }
     const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -337,6 +347,7 @@ export const authApi = {
       options: { shouldCreateUser: false },
     });
     if (error) {
+      if (isRateLimitError(error)) return mapRateLimitError();
       const msg = (error.message || '').toLowerCase();
       if (msg.includes('not found') || msg.includes('no user')) {
         return fail('No account found with this email address.');
