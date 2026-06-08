@@ -21,7 +21,7 @@ const formatProfile = (profile, authUser) => ({
   avatar: profile.avatar || '🧑‍💻',
   photo: profile.photo || null,
   phone: profile.phone || null,
-  isEmailVerified: profile.is_email_verified === true || !!authUser?.email_confirmed_at,
+  isEmailVerified: profile.is_email_verified === true,
   isPhoneVerified: profile.is_phone_verified === true,
 });
 
@@ -85,12 +85,14 @@ const mapGoal = (row) => ({
   createdAt: row.created_at,
 });
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const fetchProfile = async (userId) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 };
@@ -101,21 +103,81 @@ const emailExists = async (email) => {
   return data === true;
 };
 
-const ensureProfile = async (userId, email, name) => {
-  try {
-    return await fetchProfile(userId);
-  } catch {
-    await supabase.from('profiles').upsert({ id: userId, email, name });
-    return await fetchProfile(userId);
+/** Unblock sign-in when Supabase requires email confirmation before session */
+const confirmEmailForAccess = async (email, userId = null) => {
+  if (userId) {
+    const { data, error } = await supabase.rpc('confirm_signup_user', { target_user_id: userId });
+    if (!error && data === true) return true;
   }
+  const { data, error } = await supabase.rpc('confirm_unverified_email', { check_email: email });
+  if (error) {
+    console.warn('confirm_unverified_email:', error.message);
+    return false;
+  }
+  return data === true;
+};
+
+const isEmailNotConfirmedError = (error) =>
+  (error?.message || '').toLowerCase().includes('email not confirmed');
+
+const signInWithPassword = async (email, password, userId = null) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data?.session) {
+      return { session: data.session, user: data.user, error: null };
+    }
+
+    lastError = error;
+    if (!isEmailNotConfirmedError(error)) break;
+
+    await confirmEmailForAccess(email, userId);
+    await sleep(400);
+  }
+
+  return { session: null, user: null, error: lastError };
+};
+
+const ensureProfile = async (userId, email, name) => {
+  const displayName = name || '';
+
+  // Wait for the signup trigger to create the profile row
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const profile = await fetchProfile(userId);
+    if (profile) return profile;
+    if (attempt < 5) await sleep(150 * (attempt + 1));
+  }
+
+  // Fallback when trigger is missing or delayed
+  const { error: upsertError } = await supabase
+    .from('profiles')
+    .upsert({ id: userId, email, name: displayName });
+  if (upsertError) throw upsertError;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const profile = await fetchProfile(userId);
+    if (profile) return profile;
+    await sleep(200);
+  }
+
+  throw new Error('Profile could not be created. Please try signing in.');
 };
 
 const buildAuthUser = async (session, authUser, email, name) => {
-  const profile = await ensureProfile(authUser.id, email, name || authUser.user_metadata?.name);
-  return ok({
-    token: session.access_token,
-    user: formatProfile(profile, authUser),
-  });
+  try {
+    const profile = await ensureProfile(authUser.id, email, name || authUser.user_metadata?.name);
+    return ok({
+      token: session.access_token,
+      user: formatProfile(profile, authUser),
+    });
+  } catch (err) {
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('single json') || msg.includes('0 rows') || msg.includes('profile could not')) {
+      return fail('Account created but profile setup failed. Please sign in to continue.');
+    }
+    return fail(err.message || 'Failed to complete registration.');
+  }
 };
 
 const mapLoginError = async (email, error) => {
@@ -127,7 +189,7 @@ const mapLoginError = async (email, error) => {
     return fail('Invalid email or password.');
   }
   if (msg.includes('email not confirmed')) {
-    return fail('Please verify your email first. Check your inbox or verify later from Profile.');
+    return fail('Unable to sign in yet. Please try again in a few seconds.');
   }
   if (msg.includes('too many requests')) return fail('Too many attempts. Please wait a moment and try again.');
   return fail(error.message || 'Login failed. Please try again.');
@@ -150,7 +212,11 @@ export const authApi = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { success: false, message: 'No session' };
     try {
-      const profile = await fetchProfile(session.user.id);
+      const profile = await ensureProfile(
+        session.user.id,
+        session.user.email,
+        session.user.user_metadata?.name
+      );
       return ok({
         token: session.access_token,
         user: formatProfile(profile, session.user),
@@ -161,9 +227,9 @@ export const authApi = {
   },
 
   async login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return mapLoginError(email, error);
-    return buildAuthUser(data.session, data.user, email);
+    const { session, user, error } = await signInWithPassword(email, password);
+    if (session && user) return buildAuthUser(session, user, email);
+    return mapLoginError(email, error);
   },
 
   async register(name, email, password) {
@@ -174,25 +240,27 @@ export const authApi = {
     });
     if (error) return mapRegisterError(error);
 
-    // Session returned → email confirmation is off, log in immediately
     if (data.session && data.user) {
       return buildAuthUser(data.session, data.user, email, name);
     }
 
-    // No session but user created → try sign-in (works when confirm email is off)
     if (data.user) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (!signInError && signInData?.session) {
-        return buildAuthUser(signInData.session, signInData.user, email, name);
+      await confirmEmailForAccess(email, data.user.id);
+
+      const { session, user, error: signInError } = await signInWithPassword(email, password, data.user.id);
+      if (session && user) return buildAuthUser(session, user, email, name);
+
+      try {
+        await ensureProfile(data.user.id, email, name);
+      } catch {
+        // Profile may still be created by the DB trigger
       }
 
-      // Account created — user can verify later from Profile
-      await ensureProfile(data.user.id, email, name);
-      return ok({
-        message: 'Account created! You can verify your email later from Profile. Please sign in to continue.',
-        needsSignIn: true,
-        user: { email, name },
-      });
+      const signInMsg = (signInError?.message || '').toLowerCase();
+      if (signInMsg.includes('email not confirmed')) {
+        return fail('Account created! Please try signing in.');
+      }
+      return fail(signInError?.message || 'Account created but sign-in failed. Please try signing in.');
     }
 
     return fail('Registration failed. Please try again.');
@@ -201,8 +269,12 @@ export const authApi = {
   async me() {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return fail('Invalid token');
-    const profile = await fetchProfile(user.id);
-    return ok({ user: formatProfile(profile, user) });
+    try {
+      const profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      return ok({ user: formatProfile(profile, user) });
+    } catch (err) {
+      return fail(err.message || 'Profile not found');
+    }
   },
 
   async logout() {
@@ -461,8 +533,12 @@ export const profileApi = {
   async get() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return fail('Invalid token');
-    const profile = await fetchProfile(user.id);
-    return ok({ user: formatProfile(profile, user) });
+    try {
+      const profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      return ok({ user: formatProfile(profile, user) });
+    } catch (err) {
+      return fail(err.message || 'Profile not found');
+    }
   },
 
   async update(updates) {

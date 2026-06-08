@@ -163,16 +163,22 @@ WHERE NOT EXISTS (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+SECURITY DEFINER SET search_path = public, auth
 AS $$
 BEGIN
+  UPDATE auth.users
+  SET email_confirmed_at = COALESCE(email_confirmed_at, NOW())
+  WHERE id = NEW.id;
+
   INSERT INTO public.profiles (id, email, name, is_email_verified)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', ''),
-    NEW.email_confirmed_at IS NOT NULL
-  );
+    FALSE
+  )
+  ON CONFLICT (id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$;
@@ -194,6 +200,7 @@ ALTER TABLE public.savings_goals ENABLE ROW LEVEL SECURITY;
 
 -- profiles
 CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- categories (system defaults + own)

@@ -158,9 +158,10 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
   const altSectionStyle = isMobile ? { ...L.section, ...L.sectionMobile, ...L.altSection } : { ...L.section, ...L.altSection };
   const stepsRowStyle = isMobile ? { ...L.stepsRow, ...L.stepsRowMobile } : L.stepsRow;
   const ctaBannerInnerStyle = isMobile ? { ...L.ctaBannerInner, ...L.ctaBannerInnerMobile } : L.ctaBannerInner;
-  const footerTopStyle = isMobile ? { ...L.footerTop, ...L.footerTopMobile } : L.footerTop;
-  const footerBottomStyle = isMobile ? { ...L.footerBottom, ...L.footerBottomMobile } : L.footerBottom;
   const heroTrustRowStyle = isMobile ? { ...L.heroTrustRow, ...L.heroTrustRowMobile } : L.heroTrustRow;
+  const aboutSectionStyle = isMobile
+    ? { ...L.section, ...L.sectionMobile, ...L.altSection, ...L.aboutSection, ...L.aboutSectionMobile }
+    : { ...L.section, ...L.altSection, ...L.aboutSection };
 
   if (initLoading) return <PageSkeleton />;
 
@@ -388,14 +389,14 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── STATS ── */}
-      <section style={L.statsSection}>
+      <section style={L.statsSection} className="landing-stats-section">
         <div style={statsGridStyle} className="landing-stats-grid">
           {STATS.map(s => <StatCard key={s.label} {...s} />)}
         </div>
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={sectionStyle} className="landing-section">
+      <section id="features" style={{ ...sectionStyle, ...L.featuresSection }} className="landing-section landing-features-section">
         <SectionHeader tag="Everything You Need" title="Powerful Features for Smart Students" sub="From voice input to bill scanning — every tool to make expense tracking effortless and intelligent." />
         <div style={L.featGrid} className="landing-feat-grid">
           {FEATURES.map((f, i) => (
@@ -456,7 +457,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       </section>
 
       {/* ── ABOUT ME ── */}
-      <section id="about" style={altSectionStyle} className="landing-alt-section landing-about-section">
+      <section id="about" style={aboutSectionStyle} className="landing-alt-section landing-about-section">
         <SectionHeader tag="Meet the Creator" title="About Me" sub="The mind behind Spend Smart — building tools that help students take control of their finances." />
         <motion.div
           style={isMobile ? { ...L.aboutCard, ...L.aboutCardMobile } : L.aboutCard}
@@ -467,7 +468,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
           transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
         >
           <div style={L.aboutGlow} />
-          <div style={isMobile ? { ...L.aboutInner, ...L.aboutInnerMobile } : L.aboutInner}>
+          <div style={isMobile ? { ...L.aboutInner, ...L.aboutInnerMobile } : L.aboutInner} className="landing-about-inner">
             <motion.div
               style={L.aboutPhotoWrap}
               whileHover={{ scale: 1.02 }}
@@ -578,7 +579,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
         <div style={L.footerContainer}>
           {/* Tier 1: Links Grid */}
           <div style={isMobile ? { ...L.footerGrid, ...L.footerGridMobile } : L.footerGrid} className="landing-footer-grid">
-            <div style={L.footerMainCol}>
+            <div style={isMobile ? { ...L.footerMainCol, ...L.footerMainColMobile } : L.footerMainCol} className="landing-footer-brand">
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <LogoIcon size={52} showName nameSize={22} glow />
               </div>
@@ -621,27 +622,24 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             </div>
           </div>
 
-          {/* Tier 3: Social Icons */}
-          <div style={L.footerTier}>
+          {/* Tier 3: Social + Copyright */}
+          <div style={L.footerBottomTier}>
             <div style={L.footerSocialRow}>
               {[
                 { name: 'FB', path: "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" },
                 { name: 'TW', path: "M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" },
-                { name: 'GG', path: "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" },
-                { name: 'IG', path: "M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z M17.5 6.5h.01" },
+                { name: 'IG', path: "M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z M17.5 6.5h.01 M2 2h20v20H2z" },
                 { name: 'IN', path: "M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z M2 9h4v12H2z" },
                 { name: 'GH', path: "M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" }
               ].map((social) => (
-                <motion.div key={social.name} style={L.footerSocialCircle} whileHover={{ scale: 1.1, borderColor: "var(--accent)" }} whileTap={{ scale: 0.95 }}>
+                <motion.a key={social.name} href="#" aria-label={social.name} style={L.footerSocialCircle} whileHover={{ scale: 1.1, borderColor: "var(--accent)" }} whileTap={{ scale: 0.95 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={social.path}></path></svg>
-                </motion.div>
+                </motion.a>
               ))}
             </div>
-          </div>
-
-          {/* Tier 4: Copyright */}
-          <div style={L.footerCopyright}>
-            © 2025 Copyright: <a href="#" style={{ color:"var(--text-primary)", textDecoration:"none", fontWeight:700 }}>SpendSmart.com</a> • All Rights Reserved
+            <p style={L.footerCopyright}>
+              © 2025 <a href="#" style={{ color:"var(--text-primary)", textDecoration:"none", fontWeight:700 }}>SpendSmart.com</a> · All rights reserved
+            </p>
           </div>
         </div>
       </footer>
@@ -651,7 +649,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
 
 function SectionHeader({ tag, title, sub }) {
   return (
-    <motion.div initial={{ opacity:0, y:12 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} style={{ textAlign:"center", marginBottom:40 }}>
+    <motion.div initial={{ opacity:0, y:12 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} style={{ textAlign:"center", marginBottom:32 }}>
       <span style={L.sectionTag}>{tag}</span>
       <h2 style={L.sectionTitle} className="landing-section-title">{title}</h2>
       {sub && <p style={L.sectionSub} className="landing-section-sub">{sub}</p>}
@@ -742,7 +740,7 @@ const L = {
   navRegBtnMobile: { padding:"8px 14px", fontSize:12, fontWeight:800 },
   
   // HERO - Compact Width
-  hero:            { minHeight:"85vh", display:"grid", gridTemplateColumns:"1fr 1fr", alignItems:"center", maxWidth:"1200px", margin:"0 auto", padding:"120px 32px 60px", gap:60, position:"relative", zIndex:1 },
+  hero:            { minHeight:"auto", display:"grid", gridTemplateColumns:"1fr 1fr", alignItems:"center", maxWidth:"1200px", margin:"0 auto", padding:"100px 32px 32px", gap:48, position:"relative", zIndex:1 },
   heroContent:     { maxWidth:550 },
   heroBadge:       { display:"inline-flex", alignItems:"center", gap:8, background:"var(--accent-subtle)", border:"1.5px solid var(--accent-glow)", color:"var(--accent)", padding:"6px 14px", borderRadius:100, fontSize:12, fontWeight:800, marginBottom:24, textTransform:"uppercase", letterSpacing:"0.5px" },
   heroBadgeDot:    { width:6, height:6, borderRadius:"50%", background:"var(--accent)", animation:"pulse-glow 2s infinite" },
@@ -762,27 +760,28 @@ const L = {
   floatCard:       { position:"absolute", background:"rgba(var(--bg-card-rgb), 0.95)", border:"1.5px solid var(--border)", padding:"12px 16px", borderRadius:18, display:"flex", alignItems:"center", gap:10, boxShadow:"0 12px 40px rgba(0,0,0,0.15)", zIndex:10, backdropFilter:"blur(16px)" },
 
   // STATS
-  statsSection:    { padding:"0 32px 140px", maxWidth:"1200px", margin:"0 auto" },
+  statsSection:    { padding:"24px 32px 0", maxWidth:"1200px", margin:"0 auto" },
   statsGrid:       { display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:20 },
-  statCard:        { background:"linear-gradient(135deg, var(--bg-card), rgba(255, 159, 28, 0.05))", border:"1.5px solid var(--border)", borderRadius:24, padding:"32px 20px", textAlign:"center", transition:"all 0.3s", position:"relative", overflow:"hidden" },
+  statCard:        { background:"linear-gradient(135deg, var(--bg-card), rgba(255, 159, 28, 0.05))", border:"1.5px solid var(--border)", borderRadius:24, padding:"24px 16px", textAlign:"center", transition:"all 0.3s", position:"relative", overflow:"hidden" },
   statNum:         { fontSize:40, fontWeight:950, background:"linear-gradient(135deg, #fbbf24, var(--accent), #f97316)", backgroundClip:"text", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"8px 0 6px", letterSpacing:"-1.5px", lineHeight:1 },
   statLabel:       { fontSize:12, color:"var(--text-muted)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px" },
 
   // FEATURES
-  section:         { padding:"140px 32px", maxWidth:"1200px", margin:"0 auto" },
-  altSection:      { padding:"140px 32px", background:"linear-gradient(180deg, var(--bg-secondary), transparent)", borderTop:"1.5px solid var(--border-light)", borderBottom:"1.5px solid var(--border-light)" },
+  section:         { padding:"56px 32px", maxWidth:"1200px", margin:"0 auto" },
+  featuresSection: { paddingTop:40 },
+  altSection:      { padding:"56px 32px", background:"linear-gradient(180deg, var(--bg-secondary), transparent)", borderTop:"1.5px solid var(--border-light)", borderBottom:"1.5px solid var(--border-light)" },
   sectionTag:      { display:"inline-block", color:"var(--accent)", background:"var(--accent-subtle)", padding:"6px 14px", borderRadius:100, fontSize:11, fontWeight:900, textTransform:"uppercase", marginBottom:16, letterSpacing:"0.8px" },
   sectionTitle:    { fontSize:40, fontWeight:950, margin:"0 0 14px", letterSpacing:"-2px", lineHeight:1.1, color:"var(--text-primary)" },
   sectionSub:      { fontSize:16, color:"var(--text-secondary)", maxWidth:580, margin:"0 auto", lineHeight:1.6 },
   
-  featGrid:        { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20, marginTop:56 },
+  featGrid:        { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20, marginTop:32 },
   featCard:        { background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:28, padding:"36px 28px", transition:"all 0.4s cubic-bezier(0.4, 0, 0.2, 1)", position:"relative", overflow:"hidden" },
   featIconBox:     { width:56, height:56, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:24, fontSize:24, transition:"all 0.3s" },
   featTitle:       { fontSize:22, fontWeight:850, margin:"0 0 12px", color:"var(--text-primary)" },
   featDesc:        { fontSize:15, color:"var(--text-secondary)", lineHeight:1.6, margin:0 },
   
   // HOW IT WORKS
-  stepsRow:        { display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:28, marginTop:56 },
+  stepsRow:        { display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:28, marginTop:32 },
   stepCard:        { position:"relative", padding:"44px 28px", background:"linear-gradient(135deg, var(--bg-card), rgba(245, 158, 11, 0.03))", border:"1.5px solid var(--border)", borderRadius:28, textAlign:"center", transition:"all 0.4s" },
   stepNumBadge:    { position:"absolute", top:20, right:24, fontSize:56, fontWeight:950, color:"var(--text-primary)", opacity:0.04, lineHeight:1 },
   stepIconCircle:  { width:64, height:64, background:"linear-gradient(135deg, var(--accent), #f97316)", backgroundClip:"content-box", border:"1.5px solid var(--border)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:28, color:"#000" },
@@ -791,57 +790,58 @@ const L = {
   stepArrow:       { position:"absolute", right:"-28px", top:"50%", transform:"translateY(-50%)", fontSize:24, color:"var(--border)", opacity:0.3 },
 
   // TESTIMONIALS
-  testGrid:        { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(320px, 1fr))", gap:24, marginTop:56 },
+  testGrid:        { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(320px, 1fr))", gap:24, marginTop:32 },
   testCard:        { background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:28, padding:"36px 28px", transition:"all 0.3s" },
   testAvatar:      { width:48, height:48, borderRadius:"50%", background:"linear-gradient(135deg, var(--accent-glow), rgba(255, 159, 28, 0.2))", border:"1.5px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 },
   testStars:       { color:"#fbbf24", fontSize:13, letterSpacing:3, marginBottom:20 },
   testText:        { fontSize:15, color:"var(--text-primary)", lineHeight:1.7, fontStyle:"italic", margin:"0 0 20px" },
 
   // FAQ
-  faqList:         { maxWidth:800, margin:"56px auto 0", display:"flex", flexDirection:"column", gap:14 },
+  faqList:         { maxWidth:800, margin:"32px auto 0", display:"flex", flexDirection:"column", gap:14 },
   faqItem:         { background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:18, overflow:"hidden", transition:"all 0.3s" },
   faqQ:            { width:"100%", padding:"20px 28px", background:"transparent", border:"none", display:"flex", justifyContent:"space-between", alignItems:"center", color:"var(--text-primary)", fontSize:16, fontWeight:800, cursor:"pointer", transition:"all 0.3s" },
   faqA:            { padding:"0 28px 20px", color:"var(--text-secondary)", fontSize:15, lineHeight:1.6, margin:0 },
 
   // CTA
-  ctaBanner:       { padding:"100px 32px" },
+  ctaBanner:       { padding:"56px 32px" },
   ctaBannerInner:  { maxWidth:"1000px", margin:"0 auto", background:"var(--bg-card)", border:"1.5px solid var(--accent-subtle)", borderRadius:36, padding:"72px 48px", textAlign:"center", color:"var(--text-primary)", position:"relative", overflow:"hidden", boxShadow:"0 0 60px var(--accent-subtle), var(--shadow-lg)" },
   ctaBannerGlow:   { position:"absolute", top:"-40%", left:"50%", transform:"translateX(-50%)", width:700, height:700, background:"radial-gradient(circle, var(--accent-glow) 0%, var(--accent-subtle) 30%, transparent 70%)", pointerEvents:"none" },
   ctaBannerTitle:  { fontSize:42, fontWeight:950, margin:"0 0 14px", letterSpacing:"-2px", lineHeight:1.1, color:"var(--text-primary)" },
   ctaBannerSub:    { fontSize:18, fontWeight:500, margin:"0 auto 40px", maxWidth:500, color:"var(--text-secondary)" },
 
-  // FOOTER - Modern with Logo
-  footer:          { borderTop:"1.5px solid var(--border)", background:"var(--bg-card)", padding:"100px 32px 60px", position:"relative", zIndex:2 },
-  footerContainer: { maxWidth:"1200px", margin:"0 auto", display:"flex", flexDirection:"column", gap:80 },
-  footerGrid:      { display:"grid", gridTemplateColumns:"2.5fr 1fr 1fr 1fr 1fr", gap:40, textAlign:"left" },
-  footerMainCol:   { },
-  footerLinkCol:   { },
+  // FOOTER
+  footer:          { borderTop:"1.5px solid var(--border)", background:"var(--bg-card)", padding:"56px 32px 32px", position:"relative", zIndex:2 },
+  footerContainer: { maxWidth:"1200px", margin:"0 auto", display:"flex", flexDirection:"column", gap:40 },
+  footerGrid:      { display:"grid", gridTemplateColumns:"2fr repeat(4, 1fr)", gap:"32px 40px", textAlign:"left", alignItems:"start" },
+  footerMainCol:   { minWidth:0 },
+  footerMainColMobile: { gridColumn:"1 / -1" },
+  footerLinkCol:   { minWidth:0 },
   footerLogo:      { fontSize:18, fontWeight:900, color:"var(--text-primary)", margin:"0 0 12px", letterSpacing:"-0.5px" },
-  footerColTitle:  { fontSize:12, fontWeight:900, color:"var(--text-primary)", textTransform:"uppercase", letterSpacing:"1.2px", marginBottom:24 },
-  footerDesc:      { fontSize:15, color:"var(--text-secondary)", lineHeight:1.8, margin:0 },
-  footerLink:      { fontSize:15, color:"var(--text-secondary)", marginBottom:12, cursor:"pointer", transition:"all 0.3s", display:"block", textDecoration:"none" },
+  footerColTitle:  { fontSize:12, fontWeight:900, color:"var(--text-primary)", textTransform:"uppercase", letterSpacing:"1.2px", marginBottom:16 },
+  footerDesc:      { fontSize:14, color:"var(--text-secondary)", lineHeight:1.7, margin:0, maxWidth:340 },
+  footerLink:      { fontSize:14, color:"var(--text-secondary)", marginBottom:10, cursor:"pointer", transition:"all 0.3s", display:"block", textDecoration:"none" },
   
-  footerTier:      { borderTop:"1.5px solid var(--border-light)", paddingTop:48, textAlign:"center" },
-  footerCtaWrap:   { display:"flex", alignItems:"center", justifyContent:"center", gap:24 },
-  footerCtaBtn:    { background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"12px 32px", borderRadius:100, fontSize:14, fontWeight:800, cursor:"pointer", transition:"all 0.3s" },
+  footerTier:      { borderTop:"1.5px solid var(--border-light)", paddingTop:32, textAlign:"center" },
+  footerBottomTier:{ borderTop:"1.5px solid var(--border-light)", paddingTop:28, display:"flex", flexDirection:"column", alignItems:"center", gap:20 },
+  footerCtaWrap:   { display:"flex", alignItems:"center", justifyContent:"center", gap:20, flexWrap:"wrap" },
+  footerCtaBtn:    { background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"12px 28px", borderRadius:100, fontSize:14, fontWeight:800, cursor:"pointer", transition:"all 0.3s" },
   
-  footerSocialRow: { display:"flex", justifyContent:"center", gap:16 },
-  footerSocialCircle: { width:44, height:44, border:"2px solid var(--text-muted)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-primary)", cursor:"pointer", transition:"all 0.3s" },
+  footerSocialRow: { display:"flex", justifyContent:"center", gap:12, flexWrap:"wrap" },
+  footerSocialCircle: { width:40, height:40, border:"1.5px solid var(--border)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-primary)", cursor:"pointer", transition:"all 0.3s", textDecoration:"none" },
   
-  footerCopyright: { textAlign:"center", fontSize:14, color:"var(--text-secondary)", paddingTop:24 },
+  footerCopyright: { textAlign:"center", fontSize:13, color:"var(--text-muted)", margin:0 },
 
   // MOBILE
-  heroMobile:      { gridTemplateColumns:"1fr", padding:"100px 20px 60px", textAlign:"center" },
+  heroMobile:      { gridTemplateColumns:"1fr", padding:"88px 20px 24px", textAlign:"center" },
   heroContentMobile:{ margin:"0 auto" },
   heroH1Mobile:    { fontSize:42, letterSpacing:"-1.8px" },
   heroSubMobile:   { fontSize:15, margin:"0 auto 32px" },
   heroTrustRowMobile: { justifyContent:"center" },
   statsGridMobile: { gridTemplateColumns:"1fr 1fr", gap:16 },
-  sectionMobile:   { padding:"100px 20px" },
+  sectionMobile:   { padding:"48px 20px" },
   stepsRowMobile:  { gridTemplateColumns:"1fr", gap:24 },
   ctaBannerInnerMobile: { padding:"48px 24px", borderRadius:32 },
-  footerGridMobile: { gridTemplateColumns:"1fr 1fr", gap:40 },
-  footerCtaMobile: { flexDirection:"column", gap:16 },
+  footerGridMobile: { gridTemplateColumns:"1fr 1fr", gap:"28px 24px" },
   navInnerMobile:  { padding:"10px 14px", gap:8 },
   mobileMenuBtn:     { width:40, height:40, borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1.5px solid var(--border)", color:"var(--text-primary)", display:"flex", alignItems:"center", justifyContent:"center", padding:0, cursor:"pointer", flexShrink:0, transition:"all 0.3s" },
   mobileMenuBtnOpen: { background:"var(--accent-subtle)", borderColor:"var(--accent-glow)" },
@@ -861,8 +861,10 @@ const L = {
   mobileMenuCta:     { flex:"1 1 100%", background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"12px 16px", borderRadius:12, fontSize:13, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 16px rgba(245, 158, 11, 0.25)" },
 
   // ABOUT ME
-  aboutCard:         { position:"relative", maxWidth:960, margin:"56px auto 0", background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:32, overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.12)" },
-  aboutCardMobile:   { borderRadius:24, marginTop:40 },
+  aboutSection:      { paddingTop:56 },
+  aboutSectionMobile:{ paddingTop:48 },
+  aboutCard:         { position:"relative", maxWidth:960, margin:"36px auto 0", background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:32, overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.12)" },
+  aboutCardMobile:   { borderRadius:24, marginTop:28 },
   aboutGlow:         { position:"absolute", top:"-30%", right:"-10%", width:400, height:400, background:"radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)", opacity:0.35, pointerEvents:"none" },
   aboutInner:        { display:"grid", gridTemplateColumns:"280px 1fr", gap:48, padding:"48px 52px", alignItems:"center", position:"relative", zIndex:1 },
   aboutInnerMobile:  { gridTemplateColumns:"1fr", gap:32, padding:"32px 24px", textAlign:"center" },

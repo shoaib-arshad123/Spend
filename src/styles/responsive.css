@@ -87,9 +87,14 @@
    TABLET — 1024px and below
    ============================================================ */
 @media (max-width: 1024px) {
-  .footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
+  .footer-grid,
+  .landing-footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 28px 32px !important;
+  }
+
+  .landing-footer-brand {
+    grid-column: 1 / -1;
   }
 }
 
@@ -280,9 +285,9 @@
   /* Hero section */
   .landing-hero {
     grid-template-columns: 1fr !important;
-    padding: 100px 20px 60px !important;
+    padding: 88px 20px 24px !important;
     text-align: center !important;
-    gap: 32px !important;
+    gap: 28px !important;
     min-height: auto !important;
   }
 
@@ -298,19 +303,27 @@
     justify-content: center !important;
   }
 
-  /* Stats grid — 2 columns */
+  /* Stats */
+  .landing-stats-section {
+    padding: 16px 20px 0 !important;
+  }
+
   .landing-stats-grid {
     grid-template-columns: 1fr 1fr !important;
-    gap: 16px !important;
+    gap: 12px !important;
   }
 
   /* Sections */
   .landing-section {
-    padding: 60px 20px !important;
+    padding: 48px 20px !important;
   }
 
   .landing-alt-section {
-    padding: 60px 20px !important;
+    padding: 48px 20px !important;
+  }
+
+  .landing-features-section {
+    padding-top: 32px !important;
   }
 
   /* Features grid */
@@ -328,13 +341,16 @@
   }
 
   /* About section */
-  .landing-about-card .landing-about-inner,
-  .landing-about-card > div > div:last-child {
+  .landing-about-section {
+    padding-top: 48px !important;
+  }
+
+  .landing-about-card .landing-about-inner {
     text-align: center;
   }
 
   .landing-about-section .landing-about-card {
-    margin-top: 40px !important;
+    margin-top: 28px !important;
   }
 
   /* Mobile menu link hover */
@@ -367,17 +383,21 @@
 
   /* Footer */
   .landing-footer {
-    padding: 60px 20px 40px !important;
+    padding: 48px 20px 28px !important;
   }
 
   .landing-footer-grid {
     grid-template-columns: 1fr 1fr !important;
-    gap: 32px !important;
+    gap: 24px 20px !important;
+  }
+
+  .landing-footer-brand {
+    grid-column: 1 / -1;
   }
 
   .landing-footer-cta-wrap {
     flex-direction: column !important;
-    gap: 16px !important;
+    gap: 12px !important;
   }
 
   /* Section headers */
@@ -541,8 +561,12 @@
   }
 
   .landing-footer-grid {
-    grid-template-columns: 1fr !important;
-    gap: 24px !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px 16px !important;
+  }
+
+  .landing-footer-brand {
+    grid-column: 1 / -1;
   }
 
   .landing-cta-banner-inner {

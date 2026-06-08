@@ -339,10 +339,6 @@ export function AppProvider({ children }) {
   const register = useCallback(async (name, email, password) => {
     const data = await authApi.register(name, email, password);
     if (!data.success) throw new Error(data.message || "Registration failed");
-    if (data.needsSignIn) {
-      pushToast({ type: "success", message: data.message });
-      return data;
-    }
     setToken(data.token);
     setUser(data.user);
     setShowOnboarding(true);
@@ -352,7 +348,7 @@ export function AppProvider({ children }) {
       type: "success",
       icon: "👋"
     });
-    pushToast({ type: "success", message: `Welcome, ${data.user.name}!` });
+    pushToast({ type: "success", message: `Welcome, ${data.user.name}! You can verify your email anytime from Profile.` });
     return data;
   }, [pushToast, pushNotification]);
 
@@ -516,7 +512,7 @@ export function AppProvider({ children }) {
       pushToast({ type: "danger", message: "Failed to save expense. Check your connection." });
       return { success: false, message: "Network error. Please try again." };
     }
-  }, [user, token, expenses, budget, monthlySpent, pushToast, pushNotification, refreshBudget, logout, triggerHaptic, playNotificationSound]);
+  }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic, playNotificationSound]);
 
   const deleteExpense = useCallback(async (id) => {
     const expense = expenses.find(e => e.id === id);

@@ -29,11 +29,7 @@ export function RegisterPage({ onBack, onSwitchToLogin }) {
     if (form.password !== form.confirm) return setError("Passwords do not match.");
     setLoading(true);
     try {
-      const result = await register(form.name.trim(), form.email.trim(), form.password);
-      if (result?.needsSignIn) {
-        onSwitchToLogin();
-        return;
-      }
+      await register(form.name.trim(), form.email.trim(), form.password);
       setShowOnboarding(true);
     } catch (err) {
       setError(err.message || "Failed to create account.");
