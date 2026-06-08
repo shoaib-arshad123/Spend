@@ -1,27 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { generateId, getAutoCategory } from "../utils/helpers";
+import { getAutoCategory } from "../utils/helpers";
 import { getCategoryIcon, getCategoryColor } from "../i18n/translations";
+import { mergeCategories } from "../utils/categories";
 import { useApp } from "../context/AppContext";
 import { ChevronLeft, Mic, Camera, Sparkles, Plus, Calendar, Clock, FileText, CheckCircle2, AlertTriangle, Zap, TrendingUp } from "lucide-react";
 import VoiceButton from "./VoiceInput";
 import BillScanner from "./BillScanner";
 
-const CATS = ["Food & Dining", "Transportation", "Education", "Health & Fitness", "Entertainment", "Shopping", "Bills & Utilities", "Travel", "Other"];
-const CAT_COLORS = { 
-  "Food & Dining": "#f59e0b", 
-  "Transportation": "#3b82f6", 
-  "Education": "#8b5cf6", 
-  "Health & Fitness": "#10b981", 
-  "Entertainment": "#ec4899", 
-  "Shopping": "#f97316", 
-  "Bills & Utilities": "#6366f1",
-  "Travel": "#06b6d4",
-  "Other": "#6b7280" 
-};
-
 export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
-  const { pushToast, categories } = useApp();
+  const { pushToast, categories, refreshCategories } = useApp();
+
+  useEffect(() => {
+    refreshCategories();
+  }, [refreshCategories]);
+
+  const displayCategories = useMemo(
+    () => mergeCategories(categories),
+    [categories]
+  );
   const [amount,   setAmount]   = useState("");
   const [category, setCategory] = useState(getAutoCategory());
   const [note,     setNote]     = useState("");
@@ -218,8 +215,8 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
         {/* ── CATEGORY GRID ── */}
         <motion.div style={AE.section} variants={itemVariants}>
           <label style={AE.label}>CATEGORY</label>
-          <div style={AE.catGrid}>
-            {(Array.isArray(categories) && categories.length > 0 ? categories : [{id:'def', name:'Other', icon:'📌'}]).filter(Boolean).map((cat, idx) => {
+          <div style={AE.catGrid} className="add-expense-cat-grid">
+            {displayCategories.map((cat, idx) => {
               const active = category === cat.name;
               const color = cat.color || getCategoryColor(cat.name);
               const icon = cat.icon || getCategoryIcon(cat.name) || "📦";
@@ -475,7 +472,7 @@ const AE = {
     background:"var(--bg-card)", border:"1px solid var(--border)", 
     borderRadius:16, padding:"14px 16px" 
   },
-  catGrid: { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(84px, 1fr))", gap:10 },
+  catGrid: { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(76px, 1fr))", gap:8 },
   catBtn: { 
     display:"flex", flexDirection:"column", alignItems:"center", gap:4, 
     padding:"14px 8px 16px", borderRadius:16, cursor:"pointer", position:"relative", 

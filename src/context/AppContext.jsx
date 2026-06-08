@@ -1,13 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import {
+  authApi, expenseApi, budgetApi, profileApi, categoryApi,
+  notificationApi, recurringApi, goalsApi
+} from "../services/supabaseApi";
+import { mergeCategories } from "../utils/categories";
 
 const AppContext = createContext(null);
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4444/api";
-
-// Helper: get auth headers
-const authHeaders = (token) => ({
-  "Content-Type": "application/json",
-  ...(token ? { Authorization: `Bearer ${token}` } : {})
-});
 
 const getLocalDateKey = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -22,37 +21,6 @@ const calculateNextDate = (current, freq) => {
   else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
   else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
-};
-
-// Helper: Fetch with retry logic for rate limiting (429) errors
-const fetchWithRetry = async (url, options = {}, maxRetries = 3) => {
-  let lastError;
-  const signal = options.signal; // Preserve the signal
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      const res = await fetch(url, options);
-      // If not rate limited, return the response
-      if (res.status !== 429) return res;
-      // If rate limited and not aborted, wait and retry
-      if (!signal?.aborted) {
-        lastError = res;
-        const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    } catch (err) {
-      // If aborted, re-throw immediately
-      if (err.name === 'AbortError') throw err;
-      lastError = err;
-      if (!signal?.aborted) {
-        const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
-  }
-  // After all retries, return last response or throw error
-  if (lastError instanceof Response) return lastError;
-  throw lastError;
 };
 
 export function AppProvider({ children }) {
@@ -97,7 +65,7 @@ export function AppProvider({ children }) {
   const [dueSubscriptions, setDueSubscriptions] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [celebrationReward, setCelebrationReward] = useState(null); // For badge unlock celebrations
-  const [unlockedBadges, setUnlockedBadges] = useState(() => 
+  const [unlockedBadges, setUnlockedBadges] = useState(() =>
     JSON.parse(localStorage.getItem("sset_unlocked_badges") || "[]")
   );
   const hasNotifiedSubs = useRef(false);
@@ -192,8 +160,7 @@ export function AppProvider({ children }) {
   const refreshBudget = useCallback(async () => {
     if (!user || !token) return;
     try {
-      const res = await fetchWithRetry(`${API_URL}/budget`, { headers: authHeaders(token) });
-      const data = await res.json();
+      const data = await budgetApi.get();
       if (data.success) {
         setBudgetState(data.budget || 0);
         setDefaultBudget(data.defaultBudget || 0);
@@ -206,8 +173,7 @@ export function AppProvider({ children }) {
   const refreshBudgetHistory = useCallback(async () => {
     if (!user || !token) return;
     try {
-      const res = await fetchWithRetry(`${API_URL}/budget/history`, { headers: authHeaders(token) });
-      const data = await res.json();
+      const data = await budgetApi.getHistory();
       if (data.success) {
         setBudgetHistory(data.history || []);
       }
@@ -235,21 +201,23 @@ export function AppProvider({ children }) {
 
   const pushNotification = useCallback((notif) => {
     const now = new Date().toISOString();
-    const n = { ...notif, id: Date.now(), createdAt: now, time: now, read: false, isRead: false };
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const n = { ...notif, id: tempId, createdAt: now, time: now, read: false, isRead: false };
 
     setNotifications(prev => [n, ...prev].slice(0, 60));
     playNotificationSound();
     triggerHaptic(notif.type || "success");
 
     if (token) {
-      fetch(`${API_URL}/notifications`, {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify(notif)
-      })
-        .then(res => res.json())
+      notificationApi.create(notif)
         .then(data => {
-          if (!data.success) console.warn("Notification sync failed:", data.message);
+          if (data.success && data.notification) {
+            setNotifications(prev => prev.map(item =>
+              item.id === tempId ? { ...data.notification, isRead: false, read: false } : item
+            ));
+          } else if (!data.success) {
+            console.warn("Notification sync failed:", data.message);
+          }
         })
         .catch(err => console.error("Network error during notification sync:", err));
     }
@@ -274,6 +242,7 @@ export function AppProvider({ children }) {
   }, [playNotificationSound, token, triggerHaptic]);
 
   const logout = useCallback(() => {
+    authApi.logout().catch(console.error);
     setUser(null);
     setToken(null);
     setExpenses([]);
@@ -286,8 +255,7 @@ export function AppProvider({ children }) {
   const refreshRecurring = useCallback(async () => {
     if (!user || !token) return;
     try {
-      const res = await fetchWithRetry(`${API_URL}/recurring`, { headers: authHeaders(token) });
-      const data = await res.json();
+      const data = await recurringApi.getAll();
       if (data.success) {
         setRecurring((data.recurring || []).map(r => ({
           ...r,
@@ -305,8 +273,7 @@ export function AppProvider({ children }) {
   const refreshGoals = useCallback(async () => {
     if (!user || !token) return;
     try {
-      const res = await fetchWithRetry(`${API_URL}/goals`, { headers: authHeaders(token) });
-      const data = await res.json();
+      const data = await goalsApi.getAll();
       if (data.success) {
         const mappedGoals = (data.goals || []).map(g => ({
           ...g,
@@ -360,12 +327,7 @@ export function AppProvider({ children }) {
 
   // --- Auth Handlers ---
   const login = useCallback(async (email, password) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
+    const data = await authApi.login(email, password);
     if (!data.success) throw new Error(data.message);
     setToken(data.token);
     setUser(data.user);
@@ -375,21 +337,20 @@ export function AppProvider({ children }) {
   }, [pushToast, pushNotification]);
 
   const register = useCallback(async (name, email, password) => {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
-    });
-    const data = await res.json();
+    const data = await authApi.register(name, email, password);
     if (!data.success) throw new Error(data.message || "Registration failed");
+    if (data.needsSignIn) {
+      pushToast({ type: "success", message: data.message });
+      return data;
+    }
     setToken(data.token);
     setUser(data.user);
     setShowOnboarding(true);
-    pushNotification({ 
-      title: "Welcome to SpendSmart! 🚀", 
-      message: `Hi ${data.user.name}, we're excited to help you save more. Start by setting your monthly budget in Profile!`, 
-      type: "success", 
-      icon: "👋" 
+    pushNotification({
+      title: "Welcome to SpendSmart! 🚀",
+      message: `Hi ${data.user.name}, we're excited to help you save more. Start by setting your monthly budget in Profile!`,
+      type: "success",
+      icon: "👋"
     });
     pushToast({ type: "success", message: `Welcome, ${data.user.name}!` });
     return data;
@@ -400,12 +361,7 @@ export function AppProvider({ children }) {
   // --- SECURITY & VERIFICATION ---
   const sendOTP = useCallback(async (type, value) => {
     try {
-      const res = await fetch(`${API_URL}/auth/send-otp`, {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify({ type, value })
-      });
-      const data = await res.json();
+      const data = await authApi.sendOTP(type, value);
       if (!data.success) throw new Error(data.message);
       pushNotification({ title: "OTP Sent", message: data.message, type: "info", icon: "📧" });
       pushToast({ type: "info", message: data.message });
@@ -414,38 +370,26 @@ export function AppProvider({ children }) {
       pushToast({ type: "danger", message: err.message || "Failed to send OTP" });
       throw err;
     }
-  }, [token, pushToast, pushNotification]);
+  }, [pushToast, pushNotification]);
 
   const verifyOTP = useCallback(async (type, otp) => {
     try {
-      const res = await fetch(`${API_URL}/auth/verify-otp`, {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify({ type, otp })
-      });
-      const data = await res.json();
+      const data = await authApi.verifyOTP(type, otp);
       if (!data.success) throw new Error(data.message);
       pushNotification({ title: "Verification Successful", message: data.message, type: "success", icon: "✅" });
       pushToast({ type: "success", message: data.message });
-      // Refresh user data to get updated verification status
-      const meRes = await fetch(`${API_URL}/auth/me`, { headers: authHeaders(token) });
-      const meData = await meRes.json();
+      const meData = await authApi.me();
       if (meData.success) setUser(meData.user);
       return data;
     } catch (err) {
       pushToast({ type: "danger", message: err.message || "Verification failed" });
       throw err;
     }
-  }, [token, pushToast, pushNotification]);
+  }, [pushToast, pushNotification]);
 
   const forgotPassword = useCallback(async (identity) => {
     try {
-      const res = await fetch(`${API_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity })
-      });
-      const data = await res.json();
+      const data = await authApi.forgotPassword(identity);
       if (!data.success) throw new Error(data.message);
       pushNotification({ title: "Password Reset Requested", message: data.message, type: "info", icon: "🔑" });
       pushToast({ type: "info", message: data.message });
@@ -458,12 +402,7 @@ export function AppProvider({ children }) {
 
   const resetPassword = useCallback(async (identity, otp, newPassword) => {
     try {
-      const res = await fetch(`${API_URL}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity, otp, newPassword })
-      });
-      const data = await res.json();
+      const data = await authApi.resetPassword(identity, otp, newPassword);
       if (!data.success) throw new Error(data.message);
       pushNotification({ title: "Password Reset", message: data.message, type: "success", icon: "🔒" });
       pushToast({ type: "success", message: data.message });
@@ -476,12 +415,7 @@ export function AppProvider({ children }) {
 
   const changePassword = useCallback(async (oldPassword, newPassword) => {
     try {
-      const res = await fetch(`${API_URL}/auth/change-password`, {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify({ oldPassword, newPassword })
-      });
-      const data = await res.json();
+      const data = await authApi.changePassword(oldPassword, newPassword);
       if (!data.success) throw new Error(data.message);
       pushNotification({ title: "Security Update", message: data.message, type: "success", icon: "🛡️" });
       pushToast({ type: "success", message: data.message });
@@ -490,7 +424,7 @@ export function AppProvider({ children }) {
       pushToast({ type: "danger", message: err.message || "Update failed" });
       throw err;
     }
-  }, [token, pushToast, pushNotification]);
+  }, [pushToast, pushNotification]);
 
   // --- Expense Handlers ---
   const addExpense = useCallback(async (exp, customNotification = null) => {
@@ -518,12 +452,7 @@ export function AppProvider({ children }) {
     }
 
     try {
-      const res = await fetch(`${API_URL}/expenses`, {
-        method: "POST",
-        headers: authHeaders(token),
-        body: JSON.stringify({ ...exp, userId: user.id })
-      });
-      const data = await res.json();
+      const data = await expenseApi.add(exp);
       if (!data.success) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
         return { success: false, message: data.message || "Failed to save expense" };
@@ -535,33 +464,51 @@ export function AppProvider({ children }) {
       playNotificationSound();
       triggerHaptic("success");
 
-      // Push a permanent notification for the activity history
-      pushNotification({
-        title: "Expense Added",
-        message: `${exp.category}: PKR ${Number(exp.amount).toLocaleString()} - ${exp.description || 'No description'}`,
-        type: "success",
-        icon: "💸"
-      });
+      // One notification per expense (saved to database via pushNotification)
+      if (customNotification) {
+        pushNotification(customNotification);
+      } else {
+        pushNotification({
+          title: "Expense Added",
+          message: `${exp.category}: PKR ${Number(exp.amount).toLocaleString()}${exp.description ? ` — ${exp.description}` : ''}`,
+          type: "success",
+          icon: "💸"
+        });
+      }
 
-      // Secondary calls (won't block or cause error on the main flow)
-      try { refreshBudget(); } catch (e) { console.warn("Budget refresh failed:", e); }
+      if (Number(exp.amount) >= 5000) {
+        pushNotification({
+          title: "Large Spending Alert",
+          message: `A large transaction of PKR ${Number(exp.amount).toLocaleString()} was recorded.`,
+          type: "warning",
+          icon: "⚠️"
+        });
+      }
 
-      try {
-        if (Number(exp.amount) >= 5000) {
+      // Budget alerts only when crossing a threshold (not on every expense)
+      const newMonthlySpent = monthlySpent + Number(exp.amount);
+      const monthBudget = budget || 0;
+      if (monthBudget > 0) {
+        const prevPct = Math.round((monthlySpent / monthBudget) * 100);
+        const newPct = Math.round((newMonthlySpent / monthBudget) * 100);
+        if (prevPct < 100 && newPct >= 100) {
           pushNotification({
-            title: "Large Spending Alert",
-            message: `A large transaction of PKR ${Number(exp.amount).toLocaleString()} was recorded.`,
+            title: "Budget Exceeded",
+            message: `You've gone over your PKR ${monthBudget.toLocaleString()} monthly budget.`,
+            type: "danger",
+            icon: "🚨"
+          });
+        } else if (prevPct < 80 && newPct >= 80) {
+          pushNotification({
+            title: "Budget Warning",
+            message: `You've used ${newPct}% of your monthly budget. PKR ${Math.max(0, monthBudget - newMonthlySpent).toLocaleString()} left.`,
             type: "warning",
             icon: "⚠️"
           });
         }
+      }
 
-        if (customNotification) {
-          pushNotification(customNotification);
-        } else {
-          pushNotification({ title: "Expense Added", message: `PKR ${Number(exp.amount).toLocaleString()} saved successfully.`, type: "success", icon: "💸" });
-        }
-      } catch (e) { console.warn("Notification push failed:", e); }
+      try { refreshBudget(); } catch (e) { console.warn("Budget refresh failed:", e); }
 
       return { success: true };
     } catch (err) {
@@ -569,15 +516,12 @@ export function AppProvider({ children }) {
       pushToast({ type: "danger", message: "Failed to save expense. Check your connection." });
       return { success: false, message: "Network error. Please try again." };
     }
-  }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic]);
+  }, [user, token, expenses, budget, monthlySpent, pushToast, pushNotification, refreshBudget, logout, triggerHaptic, playNotificationSound]);
 
   const deleteExpense = useCallback(async (id) => {
     const expense = expenses.find(e => e.id === id);
     try {
-      await fetch(`${API_URL}/expenses/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(token)
-      });
+      await expenseApi.delete(id);
       setExpenses(prev => prev.filter(e => e.id !== id));
       refreshBudget();
 
@@ -586,10 +530,7 @@ export function AppProvider({ children }) {
         const goalName = expense.description.replace("Savings for: ", "");
         const goal = goals.find(g => g.name === goalName);
         if (goal) {
-          fetch(`${API_URL}/goals/${goal.id}/savings`, {
-            method: "PUT", headers: authHeaders(token),
-            body: JSON.stringify({ amount: -expense.amount })
-          }).then(() => refreshGoals());
+          goalsApi.addSavings(goal.id, -expense.amount).then(() => refreshGoals());
           pushNotification({ title: "Goal Progress Updated", message: `PKR ${expense.amount.toLocaleString()} deducted from "${goalName}" after record removal.`, type: "warning", icon: "🎯" });
         }
       }
@@ -599,10 +540,7 @@ export function AppProvider({ children }) {
         const subDesc = expense.description.replace("Bill Paid: ", "");
         const sub = recurring.find(r => (r.description || r.category) === subDesc);
         if (sub) {
-          fetch(`${API_URL}/recurring/${sub.id}`, {
-            method: "PUT", headers: authHeaders(token),
-            body: JSON.stringify({ ...sub, lastPaidDate: null })
-          }).then(() => refreshRecurring());
+          recurringApi.update(sub.id, { ...sub, lastPaidDate: null }).then(() => refreshRecurring());
           pushNotification({ title: "Bill Payment Reversed", message: `"${subDesc}" status reset to unpaid.`, type: "danger", icon: "🗓️" });
         }
       }
@@ -616,20 +554,16 @@ export function AppProvider({ children }) {
   // Bulk delete: clear expenses (can filter by type or month)
   const clearAllExpenses = useCallback(async (type = null, month = null) => {
     try {
-      let url = `${API_URL}/expenses?1=1`;
-      if (type) url += `&type=${type}`;
-      if (month) url += `&month=${month}`;
+      await expenseApi.clearAll(type, month);
 
-      await fetch(url, { method: "DELETE", headers: authHeaders(token) });
-      
       // Update local state: mark as hidden instead of removing
       setExpenses(prev => prev.map(e => {
-        const matchesType = !type || 
+        const matchesType = !type ||
           (type === 'regular' && !e.description?.startsWith("Savings for: ") && !e.description?.startsWith("Bill Paid: ")) ||
           (type === 'goal' && e.description?.startsWith("Savings for: ")) ||
           (type === 'subscription' && e.description?.startsWith("Bill Paid: "));
         const matchesMonth = !month || (e.date && e.date.startsWith(month));
-        
+
         if (matchesType && matchesMonth) return { ...e, isHidden: true };
         return e;
       }));
@@ -649,11 +583,7 @@ export function AppProvider({ children }) {
 
   const editExpense = useCallback(async (id, updates) => {
     try {
-      await fetch(`${API_URL}/expenses/${id}`, {
-        method: "PUT",
-        headers: authHeaders(token),
-        body: JSON.stringify(updates)
-      });
+      await expenseApi.update(id, updates);
       setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
       refreshBudget();
       pushToast({ type: "success", message: "✅ Expense updated!" });
@@ -668,12 +598,7 @@ export function AppProvider({ children }) {
     const num = Number(val);
     if (!user) return;
     try {
-      const res = await fetch(`${API_URL}/budget`, {
-        method: "POST",
-        headers: authHeaders(token),
-        body: JSON.stringify({ amount: num })
-      });
-      const data = await res.json();
+      const data = await budgetApi.set(num);
       if (!data.success) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
         throw new Error(data.message);
@@ -692,12 +617,7 @@ export function AppProvider({ children }) {
   const updateProfile = useCallback(async (updates) => {
     if (!user) return;
     try {
-      const res = await fetch(`${API_URL}/profile`, {
-        method: "PUT",
-        headers: authHeaders(token),
-        body: JSON.stringify(updates)
-      });
-      const data = await res.json();
+      const data = await profileApi.update(updates);
       if (!data.success) {
         if (data.message === 'Invalid token' || data.message === 'No token provided') logout();
         throw new Error(data.message);
@@ -715,44 +635,54 @@ export function AppProvider({ children }) {
     }
   }, [user, token, pushToast, pushNotification, logout]);
 
+  const refreshCategories = useCallback(async () => {
+    if (!user || !token) return;
+    try {
+      const data = await categoryApi.getAll();
+      if (data.success) {
+        setCategories(mergeCategories(data.categories || []));
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  }, [user, token]);
+
   // --- Category Handler ---
   const addCategory = useCallback(async (name, icon) => {
     if (!user) return;
     try {
-      const res = await fetch(`${API_URL}/categories`, {
-        method: "POST",
-        headers: authHeaders(token),
-        body: JSON.stringify({ name, icon })
-      });
-      const data = await res.json();
+      const data = await categoryApi.create(name, icon);
       if (data.success) {
-        setCategories(prev => [...prev, data.category]);
+        setCategories(prev => mergeCategories([...prev, data.category]));
         pushToast({ type: "success", message: "✅ Category created!" });
         pushNotification({ title: "Category Added", message: `${name} category was added successfully.`, type: "success", icon: "🗂️" });
+        return data;
       }
+      throw new Error(data.message || "Failed to create category");
     } catch (err) {
-      pushToast({ type: "danger", message: "Failed to create category" });
+      pushToast({ type: "danger", message: err.message || "Failed to create category" });
+      throw err;
     }
-  }, [user, token, pushToast, pushNotification]);
+  }, [user, pushToast, pushNotification]);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     if (token) {
-      fetch(`${API_URL}/notifications/mark-read`, { method: "PUT", headers: authHeaders(token) }).catch(console.error);
+      notificationApi.markRead().catch(console.error);
     }
   }, [token]);
 
   const clearNotifications = useCallback(() => {
     setNotifications([]);
     if (token) {
-      fetch(`${API_URL}/notifications`, { method: "DELETE", headers: authHeaders(token) }).catch(console.error);
+      notificationApi.clear().catch(console.error);
     }
   }, [token]);
 
   const deleteNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
     if (token) {
-      fetch(`${API_URL}/notifications/${id}`, { method: "DELETE", headers: authHeaders(token) }).catch(console.error);
+      notificationApi.delete(id).catch(console.error);
     }
   }, [token]);
 
@@ -761,20 +691,20 @@ export function AppProvider({ children }) {
     if (!user) return;
 
     const BADGES = [
-      { id:"first",    icon:"🌟", title:"First Step",      desc:"Added your first expense",              unlocked:e=>e.length>=1 },
-      { id:"five",     icon:"📊", title:"Data Tracker",    desc:"Tracked 5+ expenses",                   unlocked:e=>e.length>=5 },
-      { id:"ten",      icon:"🔥", title:"On Fire!",         desc:"Tracked 10+ expenses",                  unlocked:e=>e.length>=10 },
-      { id:"twenty",   icon:"💪", title:"Dedicated",       desc:"Tracked 20+ expenses",                  unlocked:e=>e.length>=20 },
-      { id:"saver",    icon:"💰", title:"Smart Saver",     desc:"Stayed under 60% of budget",            unlocked:(e,b)=>b>0&&e.reduce((s,x)=>s+x.amount,0)/b<0.6 },
-      { id:"variety",  icon:"🎨", title:"Well Rounded",    desc:"Used 4+ spending categories",           unlocked:e=>new Set(e.map(x=>x.category)).size>=4 },
-      { id:"scanner",  icon:"📸", title:"Tech Savvy",      desc:"Scanned a bill receipt",                unlocked:e=>e.some(x=>x.source==="scanner") },
-      { id:"voice",    icon:"🎙️", title:"Hands-Free",      desc:"Used voice to add expense",             unlocked:e=>e.some(x=>x.source==="voice") },
-      { id:"books",    icon:"📚", title:"Scholar",         desc:"Tracked a book/stationery expense",     unlocked:e=>e.some(x=>x.category?.toLowerCase().includes("book") || x.category?.toLowerCase().includes("edu") || x.category?.toLowerCase().includes("stat")) },
-      { id:"health",   icon:"💊", title:"Health Aware",    desc:"Tracked a health expense",              unlocked:e=>e.some(x=>x.category?.toLowerCase().includes("health") || x.category?.toLowerCase().includes("med") || x.category?.toLowerCase().includes("fit")) },
+      { id: "first", icon: "🌟", title: "First Step", desc: "Added your first expense", unlocked: e => e.length >= 1 },
+      { id: "five", icon: "📊", title: "Data Tracker", desc: "Tracked 5+ expenses", unlocked: e => e.length >= 5 },
+      { id: "ten", icon: "🔥", title: "On Fire!", desc: "Tracked 10+ expenses", unlocked: e => e.length >= 10 },
+      { id: "twenty", icon: "💪", title: "Dedicated", desc: "Tracked 20+ expenses", unlocked: e => e.length >= 20 },
+      { id: "saver", icon: "💰", title: "Smart Saver", desc: "Stayed under 60% of budget", unlocked: (e, b) => b > 0 && e.reduce((s, x) => s + x.amount, 0) / b < 0.6 },
+      { id: "variety", icon: "🎨", title: "Well Rounded", desc: "Used 4+ spending categories", unlocked: e => new Set(e.map(x => x.category)).size >= 4 },
+      { id: "scanner", icon: "📸", title: "Tech Savvy", desc: "Scanned a bill receipt", unlocked: e => e.some(x => x.source === "scanner") },
+      { id: "voice", icon: "🎙️", title: "Hands-Free", desc: "Used voice to add expense", unlocked: e => e.some(x => x.source === "voice") },
+      { id: "books", icon: "📚", title: "Scholar", desc: "Tracked a book/stationery expense", unlocked: e => e.some(x => x.category?.toLowerCase().includes("book") || x.category?.toLowerCase().includes("edu") || x.category?.toLowerCase().includes("stat")) },
+      { id: "health", icon: "💊", title: "Health Aware", desc: "Tracked a health expense", unlocked: e => e.some(x => x.category?.toLowerCase().includes("health") || x.category?.toLowerCase().includes("med") || x.category?.toLowerCase().includes("fit")) },
     ];
 
     const newly = BADGES.filter(b => b.unlocked(expenses, budget) && !unlockedBadges.includes(b.id));
-    
+
     if (newly.length > 0) {
       const badge = newly[0];
       setCelebrationReward(badge);
@@ -882,33 +812,49 @@ export function AppProvider({ children }) {
     [monthlyBreakdown]
   );
 
-  // Side Effects (Fetching data) - with AbortController to prevent overlapping requests
+  // Restore Supabase session on load
   useEffect(() => {
-    console.log("FETCH EFFECT TRIGGERED", { hasUser: !!user, hasToken: !!token });
+    authApi.getSession().then((data) => {
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.user);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setToken(session.access_token);
+        authApi.me().then((d) => { if (d.success) setUser(d.user); });
+      } else {
+        setToken(null);
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Side Effects (Fetching data)
+  useEffect(() => {
     if (!user || !token) {
       setIsLoading(false);
       return;
     }
 
-    const abortController = new AbortController();
-    const headers = authHeaders(token);
     let isMounted = true;
 
     const fetchAllData = async () => {
       try {
-        // Expenses
-        const expRes = await fetchWithRetry(`${API_URL}/expenses`, { headers, signal: abortController.signal });
-        const expData = await expRes.json();
+        const expData = await expenseApi.getAll();
         if (isMounted && expData.success) {
           const mappedExpenses = (expData.expenses || []).map(e => ({
-            ...e, 
-            amount: Number(e.amount), 
+            ...e,
+            amount: Number(e.amount),
             date: e.date ? e.date.slice(0, 10) : e.date,
-            isHidden: e.isHidden === 1 || e.isHidden === true
+            isHidden: e.isHidden === true
           }));
           setExpenses(mappedExpenses);
-          
-          // Daily tracking reminder (alerts after 6 PM if no expenses today)
+
           const today = getLocalDateKey();
           const lastExpenseAlert = localStorage.getItem("last_expense_alert");
           if (mappedExpenses.length > 0 && lastExpenseAlert !== today) {
@@ -920,79 +866,46 @@ export function AppProvider({ children }) {
           }
         } else if (expData.message === 'Invalid token') logout();
 
-        // Categories
-        const catRes = await fetchWithRetry(`${API_URL}/categories`, { headers, signal: abortController.signal });
-        const catData = await catRes.json();
+        const catData = await categoryApi.getAll();
         if (isMounted && catData.success) {
-          // Filter out duplicates by name (case-insensitive) and consolidate
-          const uniqueCats = [];
-          const seen = new Set();
-          (catData.categories || []).forEach(c => {
-            if (!c || typeof c !== 'object') return;
-            let name = (c.name || '').trim();
-            const nameLower = name.toLowerCase();
-            
-            // Consolidate similar categories
-            if (nameLower === "food" || nameLower === "dining") name = "Food & Dining";
-            if (nameLower === "transport" || nameLower === "taxi" || nameLower === "car") name = "Transportation";
-            if (nameLower === "bills" || nameLower === "utilities") name = "Bills & Utilities";
-            if (nameLower === "health" || nameLower === "medical") name = "Health & Fitness";
-            if (nameLower === "ent") name = "Entertainment";
-            
-            const normalized = name.toLowerCase();
-            if (!seen.has(normalized)) {
-              seen.add(normalized);
-              uniqueCats.push({ ...c, name });
-            }
-          });
-          setCategories(uniqueCats);
+          setCategories(mergeCategories(catData.categories || []));
+        } else if (isMounted) {
+          setCategories(mergeCategories([]));
         }
 
-        // Budget
-        const budRes = await fetchWithRetry(`${API_URL}/budget`, { headers, signal: abortController.signal });
-        const budData = await budRes.json();
+        const budData = await budgetApi.get();
         if (isMounted && budData.success) {
           setBudgetState(budData.budget || 0);
           setDefaultBudget(budData.defaultBudget || 0);
         }
 
-        // Budget History
-        const histRes = await fetchWithRetry(`${API_URL}/budget/history`, { headers, signal: abortController.signal });
-        const histData = await histRes.json();
+        const histData = await budgetApi.getHistory();
         if (isMounted && histData.success) setBudgetHistory(histData.history || []);
 
-        // Notifications
-        const notifRes = await fetchWithRetry(`${API_URL}/notifications`, { headers, signal: abortController.signal });
-        const notifData = await notifRes.json();
+        const notifData = await notificationApi.getAll();
         if (isMounted && notifData.success) setNotifications(notifData.notifications || []);
 
-        // Profile
-        const profRes = await fetchWithRetry(`${API_URL}/profile`, { headers, signal: abortController.signal });
-        const profData = await profRes.json();
+        const profData = await profileApi.get();
         if (isMounted && profData.success && profData.user) {
           setUser(prev => ({ ...prev, ...profData.user }));
         }
 
-        // Recurring
-        const recurRes = await fetchWithRetry(`${API_URL}/recurring`, { headers, signal: abortController.signal });
-        const recurData = await recurRes.json();
+        const recurData = await recurringApi.getAll();
         if (isMounted && recurData.success) {
           setRecurring((recurData.recurring || []).map(r => ({
             ...r,
             amount: Number(r.amount),
-            isActive: r.isActive === true || r.isActive === 1
+            isActive: r.isActive === true
           })));
         } else if (recurData.message === 'Invalid token') logout();
 
-        // Goals
-        const goalRes = await fetchWithRetry(`${API_URL}/goals`, { headers, signal: abortController.signal });
-        const goalData = await goalRes.json();
+        const goalData = await goalsApi.getAll();
         if (isMounted && goalData.success) {
           const mappedGoals = (goalData.goals || []).map(g => ({
             ...g,
             targetAmount: Number(g.targetAmount),
             savedAmount: Number(g.savedAmount),
-            isCompleted: g.isCompleted === true || g.isCompleted === 1
+            isCompleted: g.isCompleted === true
           }));
           setGoals(mappedGoals);
 
@@ -1006,7 +919,6 @@ export function AppProvider({ children }) {
                 const daysLeft = Math.ceil((new Date(g.deadline) - new Date()) / (1000 * 60 * 60 * 24));
                 return daysLeft > 0 && daysLeft <= 7 && g.savedAmount < g.targetAmount;
               });
-
               if (urgent.length > 0) {
                 localStorage.setItem("last_notified_goals", today);
                 pushNotification({ title: "Goal Deadline Approaching ⏳", message: `You have ${urgent.length} goal(s) due within a week. Keep saving!`, type: "warning", icon: "🎯" });
@@ -1021,20 +933,14 @@ export function AppProvider({ children }) {
           }
         } else if (goalData.message === 'Invalid token') logout();
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error("Error fetching data:", err);
-        }
+        console.error("Error fetching data:", err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
 
     fetchAllData();
-
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
+    return () => { isMounted = false; };
   }, [token]);
 
   // Auto-process subscriptions
@@ -1065,13 +971,8 @@ export function AppProvider({ children }) {
               type: "success", icon: "✅"
             });
 
-            fetch(`${API_URL}/recurring/${item.id}`, {
-              method: "PUT", headers: authHeaders(token),
-              body: JSON.stringify({ ...item, nextDueDate: nextDue, lastPaidDate: today })
-            }).then(() => {
-              fetch(`${API_URL}/recurring`, { headers: authHeaders(token) })
-                .then(res => res.json())
-                .then(d => { if (d.success) setRecurring(d.recurring); });
+            recurringApi.update(item.id, { ...item, nextDueDate: nextDue, lastPaidDate: today }).then(() => {
+              recurringApi.getAll().then(d => { if (d.success) setRecurring(d.recurring); });
             });
           } else {
             const lastAlert = localStorage.getItem(`budget_alert_${item.id}`);
@@ -1114,7 +1015,7 @@ export function AppProvider({ children }) {
       monthlyExpenses, monthlySpent, allTimeTotal, daysSinceFirstExpense, totalTrackingDays,
       previousMonthCarryOver, effectiveMonthlyBudget, monthlyRemaining, monthlyBreakdown, allTimeBudget: allTimeBudgetVal, budgetHistory,
       budget, setBudget, defaultBudget, setDefaultBudget,
-      categories, addCategory,
+      categories, addCategory, refreshCategories,
       notifications, unreadCount, markAllRead, clearNotifications, deleteNotification, pushNotification, requestNotificationPermission,
       toasts, pushToast, showOnboarding, setShowOnboarding,
       sendOTP, verifyOTP, forgotPassword, resetPassword, changePassword,

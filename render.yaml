@@ -1,48 +1,7 @@
-# render.yaml — Deploy both frontend and backend to Render
+# render.yaml — Deploy frontend static site (Supabase handles backend)
 # Docs: https://render.com/docs/blueprint-spec
-#
-# HOW TO USE:
-#   1. Push this repo to GitHub
-#   2. Go to https://dashboard.render.com → New → Blueprint
-#   3. Connect your repo — Render reads this file automatically
-#   4. Set the secret env vars in the Render dashboard (DB_PASSWORD, JWT_SECRET, etc.)
 
 services:
-  # ── Backend API (Node.js) ──────────────────────────────────────────────────
-  - type: web
-    name: spendsmart-api
-    runtime: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 4444
-      # Set these in the Render dashboard (mark as secret):
-      - key: DB_SERVER
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_PORT
-        value: 1433
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_EXPIRY
-        value: 7d
-      - key: EMAIL_USER
-        sync: false
-      - key: EMAIL_PASS
-        sync: false
-      - key: FRONTEND_URL
-        sync: false   # Set to your frontend URL after deploying it
-
-  # ── Frontend (Static Site) ─────────────────────────────────────────────────
   - type: web
     name: spendsmart-frontend
     runtime: static
@@ -50,10 +9,11 @@ services:
     buildCommand: npm install && npm run build:prod
     staticPublishPath: dist
     envVars:
-      - key: VITE_API_URL
-        sync: false   # Set to your backend URL: https://spendsmart-api.onrender.com/api
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
     routes:
-      # SPA fallback — all routes serve index.html (React Router handles them)
       - type: rewrite
         source: /*
         destination: /index.html

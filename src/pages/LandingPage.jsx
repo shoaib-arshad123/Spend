@@ -3,10 +3,13 @@ import { motion, useInView, useScroll, useTransform, AnimatePresence } from "fra
 import { PageSkeleton } from "../components/SkeletonLoader";
 import { LogoIcon } from "../components/LogoIcon";
 import { 
-  BarChart3, BrainCircuit, Scan, Mic, BellRing, TrendingUp, Trophy, Languages, 
-  Users, PiggyBank, Star, FileSpreadsheet, CheckCircle2, Wallet, Smartphone, Sun, Moon, Menu, X,
-  ExternalLink, ChevronRight, Zap, Shield, Target
+  BarChart3, BrainCircuit, Scan, Mic, BellRing, TrendingUp, Trophy, 
+  Users, PiggyBank, Star, FileSpreadsheet, CheckCircle2, Wallet, Smartphone, Sun, Moon, X,
+  ChevronRight, Code2, GraduationCap, Sparkles
 } from "lucide-react";
+import shoaibPhoto from "../assets/Shoaib.jpeg";
+
+const NAV_LINKS = ['Features', 'How It Works', 'About', 'Testimonials', 'FAQ'];
 
 const FEATURES = [
   { icon: <BarChart3 />, color:"#f59e0b", title:"Smart Dashboard",     desc:"Real-time charts that visualize your spending across all categories. Understand where your money goes at a glance." },
@@ -29,10 +32,9 @@ const STATS = [
 ];
 
 const TESTIMONIALS = [
-  { name:"Hira Baig",     uni:"NUST Islamabad",       avatar:"👩‍🎓", text:"SpendSmart changed how I manage my pocket money. I saved PKR 8,000 in my first month!", stars:5 },
-  { name:"Ahmed Raza",    uni:"FAST Lahore",           avatar:"👨‍💻", text:"The bill scanner is incredible. I just take photos of receipts and it does everything.", stars:5 },
-  { name:"Fatima Malik",  uni:"UET Peshawar",          avatar:"👩‍🔬", text:"The detailed charts help me keep track of every single rupee. Very useful!", stars:5 },
-  { name:"Zain ul Abdin", uni:"COMSATS Islamabad",     avatar:"🧑‍💻", text:"The AI advice feature literally told me I was overspending on chai. Very accurate 😂", stars:4 },
+  { name:"Afaq Usman",    uni:"Riphah International University", avatar:"👨‍🎓", text:"SpendSmart has been a game-changer for my student life at Riphah. I can finally track my lunch and commute expenses without any hassle.", stars:5 },
+  { name:"Saifullah",     uni:"Riphah International University", avatar:"👨‍💻", text:"The bill scanner feature is what I use the most. Just a snap and my canteen bills are logged instantly. Truly a life saver!", stars:5 },
+  { name:"Shahbaz",       uni:"Riphah International University", avatar:"🧑‍💻", text:"I love the AI insights. It helped me realize how much I was spending on small things. SpendSmart is a must-have for every student.", stars:5 },
 ];
 
 const STEPS = [
@@ -141,6 +143,11 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileMenuOpen]);
+
   const navInnerStyle = isMobile ? { ...L.navInner, ...L.navInnerMobile } : L.navInner;
   const heroStyle = isMobile ? { ...L.hero, ...L.heroMobile } : L.hero;
   const heroContentStyle = isMobile ? { ...L.heroContent, ...L.heroContentMobile } : L.heroContent;
@@ -164,8 +171,8 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
       <div style={L.orb1} /><div style={L.orb2} />
 
       {/* ── NAVBAR ── */}
-      <nav style={{ ...L.nav, ...(scrolled ? L.navScrolled : {}) }}>
-        <div style={L.navInner} className="glass">
+      <nav style={{ ...L.nav, ...(scrolled ? L.navScrolled : {}) }} className="landing-nav">
+        <div style={navInnerStyle} className="nav-inner glass landing-nav-inner">
           <motion.a 
             style={L.navLogo} 
             href="#" 
@@ -177,7 +184,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
           </motion.a>
           {!isMobile && (
             <div style={L.navLinks}>
-              {['Features','How It Works','Testimonials','FAQ'].map(l => (
+              {NAV_LINKS.map(l => (
                 <motion.a 
                   key={l} 
                   href={`#${l.toLowerCase().replace(/ /g,'-')}`} 
@@ -215,7 +222,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               Sign In
             </motion.button>
             <motion.button 
-              style={L.navRegBtn} 
+              style={{ ...L.navRegBtn, ...(isMobile ? L.navRegBtnMobile : {}) }} 
               onClick={onGetStarted} 
               whileHover={{ scale:1.08, boxShadow: "0 8px 24px rgba(245, 158, 11, 0.3)" }} 
               whileTap={{ scale:0.96 }} 
@@ -224,27 +231,106 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
               {isMobile ? "Join Free" : "Get Started Free"}
             </motion.button>
             {isMobile && (
-              <button style={L.mobileMenuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
+              <motion.button
+                style={{ ...L.mobileMenuBtn, ...(mobileMenuOpen ? L.mobileMenuBtnOpen : {}) }}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen}
+                whileTap={{ scale: 0.92 }}
+              >
+                <span style={L.hamburgerLines}>
+                  <motion.span
+                    style={L.hamburgerLine}
+                    animate={mobileMenuOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                  <motion.span
+                    style={L.hamburgerLine}
+                    animate={mobileMenuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                  <motion.span
+                    style={L.hamburgerLine}
+                    animate={mobileMenuOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                </span>
+              </motion.button>
             )}
           </div>
         </div>
-        {/* Mobile menu */}
+        {/* Mobile menu — full overlay */}
         <AnimatePresence>
           {isMobile && mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity:0, height:0 }}
-              animate={{ opacity:1, height:"auto" }}
-              exit={{ opacity:0, height:0 }}
-              style={L.mobileMenu}
-            >
-              {['Features','How It Works','Testimonials','FAQ'].map(l => (
-                <a key={l} href={`#${l.toLowerCase().replace(/ /g,'-')}`} style={L.mobileMenuLink} onClick={() => setMobileMenuOpen(false)}>
-                  {l}
-                </a>
-              ))}
-            </motion.div>
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                style={L.mobileMenuBackdrop}
+                onClick={() => setMobileMenuOpen(false)}
+                aria-hidden="true"
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: [0.19, 1, 0.22, 1] }}
+                style={L.mobileMenu}
+                className="landing-mobile-menu"
+              >
+                <div style={L.mobileMenuHeader}>
+                  <span style={L.mobileMenuLabel}>Menu</span>
+                  <button style={L.mobileMenuClose} onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+                    <X size={18} />
+                  </button>
+                </div>
+                <div style={L.mobileMenuLinks}>
+                  {NAV_LINKS.map((l, i) => (
+                    <motion.a
+                      key={l}
+                      href={`#${l.toLowerCase().replace(/ /g, '-')}`}
+                      style={L.mobileMenuLink}
+                      onClick={() => setMobileMenuOpen(false)}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 + i * 0.05 }}
+                      whileHover={{ backgroundColor: "rgba(245, 158, 11, 0.06)" }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>{l}</span>
+                      <ChevronRight size={16} style={{ color: "var(--accent)", opacity: 0.7 }} />
+                    </motion.a>
+                  ))}
+                </div>
+                <div style={L.mobileMenuDivider} />
+                <div style={L.mobileMenuActions}>
+                  <motion.button
+                    style={L.mobileMenuSignIn}
+                    onClick={() => { setMobileMenuOpen(false); onLogin(); }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Sign In
+                  </motion.button>
+                  <motion.button
+                    style={L.mobileThemeBtn}
+                    onClick={toggleTheme}
+                    aria-label="Toggle theme"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                  </motion.button>
+                  <motion.button
+                    style={L.mobileMenuCta}
+                    onClick={() => { setMobileMenuOpen(false); onGetStarted(); }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Get Started Free
+                  </motion.button>
+                </div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </nav>
@@ -254,7 +340,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
         <motion.div style={{ ...heroContentStyle, y: heroY }}>
           <div>
             <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}>
-              <div style={L.heroBadge}>
+              <div style={L.heroBadge} className="landing-hero-badge">
                 <span style={L.heroBadgeDot} />
                 🎓 Built for Pakistani Students · Track your expenses effortlessly
               </div>
@@ -269,7 +355,7 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             <motion.p style={heroSubStyle}
               initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.35 }}>
               The intelligent expense tracker that learns your spending habits, warns you before you overspend,
-              and builds real financial discipline — <span style={{ color: "var(--accent)", fontWeight: 600 }}>for free</span>, in your language.
+              and builds real financial discipline — <span style={{ color: "var(--accent)", fontWeight: 600 }}>for free</span>.
             </motion.p>
 
             <motion.div style={L.heroCTAs} className="landing-hero-ctas"
@@ -367,6 +453,52 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             </motion.div>
           ))}
         </div>
+      </section>
+
+      {/* ── ABOUT ME ── */}
+      <section id="about" style={altSectionStyle} className="landing-alt-section landing-about-section">
+        <SectionHeader tag="Meet the Creator" title="About Me" sub="The mind behind Spend Smart — building tools that help students take control of their finances." />
+        <motion.div
+          style={isMobile ? { ...L.aboutCard, ...L.aboutCardMobile } : L.aboutCard}
+          className="landing-about-card"
+          initial={{ opacity: 0, y: 32 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1] }}
+        >
+          <div style={L.aboutGlow} />
+          <div style={isMobile ? { ...L.aboutInner, ...L.aboutInnerMobile } : L.aboutInner}>
+            <motion.div
+              style={L.aboutPhotoWrap}
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div style={L.aboutPhotoRing} />
+              <img src={shoaibPhoto} alt="Shoaib Arshad" style={L.aboutPhoto} />
+              <div style={L.aboutPhotoBadge}>
+                <Sparkles size={12} />
+                <span>Creator</span>
+              </div>
+            </motion.div>
+            <div style={L.aboutContent}>
+              <div style={L.aboutNameRow}>
+                <h3 style={L.aboutName}>Shoaib Arshad</h3>
+                <div style={{ ...L.aboutTags, ...(isMobile ? { justifyContent: "center" } : {}) }}>
+                  <span style={L.aboutTag}><GraduationCap size={13} /> Software Engineering Student</span>
+                  <span style={L.aboutTag}><Code2 size={13} /> Web Developer</span>
+                </div>
+              </div>
+              <p style={L.aboutText}>
+                Hi, I'm <strong style={{ color: "var(--text-primary)" }}>Shoaib Arshad</strong>, a Software Engineering student passionate about technology, web development, and problem-solving. I created <strong style={{ color: "var(--accent)" }}>Spend Smart</strong> to help people manage their finances more effectively, track expenses, and develop smarter spending habits. My goal is to build digital solutions that make everyday life simpler and more organized.
+              </p>
+              <blockquote style={L.aboutQuote}>
+                <span style={L.aboutQuoteMark}>"</span>
+                Spend Smart Today, Secure Your Tomorrow.
+                <span style={L.aboutQuoteMark}>"</span>
+              </blockquote>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* ── TESTIMONIALS ── */}
@@ -469,7 +601,8 @@ export default function LandingPage({ onGetStarted, onLogin, theme, toggleTheme 
             </div>
             <div style={L.footerLinkCol}>
               <h4 style={L.footerColTitle}>Company</h4>
-              {["About","Team","Careers","Contact"].map(l => <motion.a key={l} href="#" style={L.footerLink} whileHover={{ x: 4, color: "var(--accent)" }} whileTap={{ scale: 0.95 }}>{l}</motion.a>)}
+              <motion.a href="#about" style={L.footerLink} whileHover={{ x: 4, color: "var(--accent)" }} whileTap={{ scale: 0.95 }}>About</motion.a>
+              {["Team","Careers","Contact"].map(l => <motion.a key={l} href="#" style={L.footerLink} whileHover={{ x: 4, color: "var(--accent)" }} whileTap={{ scale: 0.95 }}>{l}</motion.a>)}
             </div>
           </div>
 
@@ -606,6 +739,7 @@ const L = {
   themeToggleBtn:  { background:"transparent", border:"1.5px solid var(--border)", color:"var(--text-primary)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", width:38, height:38, borderRadius:"50%", transition:"all 0.3s" },
   navLoginBtn:     { background:"transparent", border:"1.5px solid var(--border)", color:"var(--text-primary)", padding:"10px 22px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.3s" },
   navRegBtn:       { background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"10px 24px", borderRadius:10, fontSize:13, fontWeight:800, cursor:"pointer", transition:"all 0.3s", boxShadow:"0 4px 16px rgba(245, 158, 11, 0.25)" },
+  navRegBtnMobile: { padding:"8px 14px", fontSize:12, fontWeight:800 },
   
   // HERO - Compact Width
   hero:            { minHeight:"85vh", display:"grid", gridTemplateColumns:"1fr 1fr", alignItems:"center", maxWidth:"1200px", margin:"0 auto", padding:"120px 32px 60px", gap:60, position:"relative", zIndex:1 },
@@ -708,8 +842,40 @@ const L = {
   ctaBannerInnerMobile: { padding:"48px 24px", borderRadius:32 },
   footerGridMobile: { gridTemplateColumns:"1fr 1fr", gap:40 },
   footerCtaMobile: { flexDirection:"column", gap:16 },
-  navInnerMobile:  { borderRadius:32, padding:"12px 16px" },
-  mobileMenuBtn:   { background:"transparent", border:"none", color:"var(--text-primary)", display:"flex", alignItems:"center", justifyContent:"center", padding:4, cursor:"pointer" },
-  mobileMenu:      { position:"absolute", top:"100%", left:0, right:0, background:"var(--bg-card)", borderBottom:"1.5px solid var(--border)", padding:24, display:"flex", flexDirection:"column", gap:16, zIndex:1001 },
-  mobileMenuLink:  { fontSize:16, fontWeight:700, color:"var(--text-primary)", textDecoration:"none", padding:"12px 0" },
+  navInnerMobile:  { padding:"10px 14px", gap:8 },
+  mobileMenuBtn:     { width:40, height:40, borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1.5px solid var(--border)", color:"var(--text-primary)", display:"flex", alignItems:"center", justifyContent:"center", padding:0, cursor:"pointer", flexShrink:0, transition:"all 0.3s" },
+  mobileMenuBtnOpen: { background:"var(--accent-subtle)", borderColor:"var(--accent-glow)" },
+  hamburgerLines:    { width:18, height:14, display:"flex", flexDirection:"column", justifyContent:"space-between", alignItems:"center" },
+  hamburgerLine:     { display:"block", width:18, height:2, borderRadius:2, background:"currentColor", transformOrigin:"center" },
+  mobileMenuBackdrop:{ position:"fixed", inset:0, top:0, background:"rgba(0,0,0,0.55)", backdropFilter:"blur(6px)", zIndex:1001 },
+  mobileMenu:        { position:"fixed", top:"calc(56px + env(safe-area-inset-top, 0px))", left:12, right:12, background:"rgba(var(--bg-card-rgb, 15,17,21), 0.92)", backdropFilter:"blur(24px) saturate(180%)", border:"1.5px solid var(--border)", borderRadius:20, padding:"16px 18px 18px", display:"flex", flexDirection:"column", gap:0, zIndex:1002, boxShadow:"0 24px 64px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04) inset" },
+  mobileMenuHeader:  { display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 },
+  mobileMenuLabel:   { fontSize:11, fontWeight:900, color:"var(--accent)", textTransform:"uppercase", letterSpacing:"1.4px" },
+  mobileMenuClose:   { width:32, height:32, borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid var(--border)", color:"var(--text-secondary)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" },
+  mobileMenuLinks:   { display:"flex", flexDirection:"column", gap:4 },
+  mobileMenuLink:    { display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:15, fontWeight:700, color:"var(--text-primary)", textDecoration:"none", padding:"14px 14px", borderRadius:12, background:"transparent", transition:"background 0.2s" },
+  mobileMenuDivider: { height:1, background:"var(--border-light)", margin:"12px 0" },
+  mobileMenuActions: { display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" },
+  mobileMenuSignIn:  { flex:1, background:"rgba(255,255,255,0.04)", border:"1.5px solid var(--border)", color:"var(--text-primary)", padding:"12px 16px", borderRadius:12, fontSize:14, fontWeight:700, cursor:"pointer" },
+  mobileThemeBtn:    { background:"rgba(255,255,255,0.04)", border:"1.5px solid var(--border)", color:"var(--text-primary)", width:44, height:44, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 },
+  mobileMenuCta:     { flex:"1 1 100%", background:"linear-gradient(135deg, var(--accent), #f97316)", border:"none", color:"#000", padding:"12px 16px", borderRadius:12, fontSize:13, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 16px rgba(245, 158, 11, 0.25)" },
+
+  // ABOUT ME
+  aboutCard:         { position:"relative", maxWidth:960, margin:"56px auto 0", background:"var(--bg-card)", border:"1.5px solid var(--border)", borderRadius:32, overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.12)" },
+  aboutCardMobile:   { borderRadius:24, marginTop:40 },
+  aboutGlow:         { position:"absolute", top:"-30%", right:"-10%", width:400, height:400, background:"radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)", opacity:0.35, pointerEvents:"none" },
+  aboutInner:        { display:"grid", gridTemplateColumns:"280px 1fr", gap:48, padding:"48px 52px", alignItems:"center", position:"relative", zIndex:1 },
+  aboutInnerMobile:  { gridTemplateColumns:"1fr", gap:32, padding:"32px 24px", textAlign:"center" },
+  aboutPhotoWrap:    { position:"relative", width:240, height:240, margin:"0 auto" },
+  aboutPhotoRing:    { position:"absolute", inset:-8, borderRadius:"50%", background:"linear-gradient(135deg, var(--accent), #f97316, #8b5cf6)", opacity:0.85, animation:"pulse-glow 3s ease-in-out infinite" },
+  aboutPhoto:        { position:"relative", width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover", border:"4px solid var(--bg-card)", boxShadow:"0 16px 48px rgba(0,0,0,0.2)" },
+  aboutPhotoBadge:   { position:"absolute", bottom:8, left:"50%", transform:"translateX(-50%)", display:"inline-flex", alignItems:"center", gap:6, background:"linear-gradient(135deg, var(--accent), #f97316)", color:"#000", padding:"6px 14px", borderRadius:100, fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.5px", boxShadow:"0 4px 16px rgba(245, 158, 11, 0.35)", whiteSpace:"nowrap" },
+  aboutContent:      { display:"flex", flexDirection:"column", gap:20 },
+  aboutNameRow:      { display:"flex", flexDirection:"column", gap:12 },
+  aboutName:         { fontSize:32, fontWeight:950, margin:0, letterSpacing:"-1px", color:"var(--text-primary)", lineHeight:1.1 },
+  aboutTags:         { display:"flex", flexWrap:"wrap", gap:8 },
+  aboutTag:          { display:"inline-flex", alignItems:"center", gap:6, fontSize:12, fontWeight:700, color:"var(--text-secondary)", background:"var(--accent-subtle)", border:"1px solid var(--accent-glow)", padding:"6px 12px", borderRadius:100 },
+  aboutText:         { fontSize:16, color:"var(--text-secondary)", lineHeight:1.8, margin:0 },
+  aboutQuote:        { margin:0, padding:"20px 24px", background:"linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.04))", border:"1.5px solid var(--accent-glow)", borderRadius:16, fontSize:17, fontWeight:700, fontStyle:"italic", color:"var(--accent)", lineHeight:1.5, position:"relative" },
+  aboutQuoteMark:    { color:"var(--accent)", opacity:0.5, fontSize:20, fontWeight:900 },
 };

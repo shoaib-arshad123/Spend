@@ -14,7 +14,7 @@ const toastStyle = {
 export function ToastContainer() {
   const { toasts } = useApp();
   return (
-    <div style={{ position:"fixed", bottom:24, right:24, zIndex:9999, display:"flex", flexDirection:"column-reverse", gap:8, maxWidth:340 }}>
+    <div className="toast-container" style={{ position:"fixed", bottom:24, right:24, zIndex:9999, display:"flex", flexDirection:"column-reverse", gap:8, maxWidth:340 }}>
       <AnimatePresence>
         {toasts.map(t => {
           const s = toastStyle[t.type] || toastStyle.info;
@@ -78,15 +78,16 @@ export function NotificationCenter({ onClose }) {
       exit={{ opacity:0, y:-8, scale:0.97 }}
       transition={{ duration:0.2 }}
       style={NC.panel}
+      className="notification-panel"
     >
-      <div style={NC.header}>
+      <div style={NC.header} className="notification-header">
         <h3 style={NC.title}>
           <Bell size={16} style={{ marginRight:6, verticalAlign:"middle" }} />
           <span style={{ verticalAlign:"middle" }}>Notifications</span>
         </h3>
-        <div style={{ display:"flex", gap:6 }}>
-          <motion.button style={NC.actionBtn} onClick={markAllRead} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Mark all read</motion.button>
-          <motion.button style={NC.actionBtn} onClick={clearNotifications} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Clear all</motion.button>
+        <div style={{ display:"flex", gap:6, flexShrink:0 }} className="notification-actions">
+          <motion.button style={NC.actionBtn} onClick={markAllRead} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="notif-action-btn">Mark read</motion.button>
+          <motion.button style={NC.actionBtn} onClick={clearNotifications} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="notif-action-btn">Clear</motion.button>
           <motion.button style={{ ...NC.actionBtn, display:"flex", alignItems:"center" }} onClick={onClose} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}><X size={16} /></motion.button>
         </div>
       </div>
@@ -109,13 +110,13 @@ export function NotificationCenter({ onClose }) {
         ) : shown.map(n => {
           const s = nTypeStyle[n.type] || nTypeStyle.info;
           return (
-            <div key={n.id} style={{ ...NC.item, background: n.isRead ? "transparent" : s.bg, borderLeft:`3px solid ${n.isRead ? "transparent" : s.color}` }}>
+            <div key={n.id} className="notification-item" style={{ ...NC.item, background: n.isRead ? "transparent" : s.bg, borderLeft:`3px solid ${n.isRead ? "transparent" : s.color}` }}>
               <span style={{ fontSize:16, flexShrink:0 }}>{n.icon}</span>
-              <div style={{ flex:1 }}>
+              <div style={{ flex:1, minWidth:0 }}>
                 <p style={NC.itemTitle}>{n.title}</p>
                 <p style={NC.itemMsg}>{n.message}</p>
               </div>
-              <span style={NC.itemTime}>{timeAgo(n.time)}</span>
+              <span style={NC.itemTime} className="notification-time">{timeAgo(n.time)}</span>
             </div>
           );
         })}

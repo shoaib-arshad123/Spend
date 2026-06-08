@@ -114,14 +114,75 @@
   }
 
   /* Navbar */
-  .nav-inner {
-    padding: 10px 16px !important;
+  .nav-inner,
+  .landing-nav-inner {
+    padding: 10px 14px !important;
+    gap: 8px !important;
   }
   .nav-logo-text {
     font-size: 16px !important;
   }
   .nav-cta-group {
     gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .landing-nav .nav-cta-group {
+    gap: 4px !important;
+  }
+
+  .landing-hero-badge {
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+
+  /* Toast notifications */
+  .toast-container {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(72px + var(--safe-bottom)) !important;
+    max-width: none !important;
+  }
+
+  /* Notification dropdown panel */
+  .notification-panel {
+    position: fixed !important;
+    top: calc(52px + var(--safe-top)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 14px !important;
+  }
+
+  .notification-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .notification-actions {
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+
+  .notif-action-btn {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+  }
+
+  .notification-item {
+    flex-wrap: wrap !important;
+  }
+
+  .notification-time {
+    width: 100% !important;
+    text-align: right !important;
+    margin-top: 4px !important;
   }
 
   /* Responsive grid tighter on tablet */
@@ -165,6 +226,12 @@
     gap: 8px !important;
     padding: 12px !important;
     border-radius: 20px !important;
+  }
+
+  /* Add Expense — category grid */
+  .add-expense-cat-grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+    gap: 8px !important;
   }
 
   /* ── DASHBOARD ── */
@@ -260,6 +327,21 @@
     margin-top: 32px !important;
   }
 
+  /* About section */
+  .landing-about-card .landing-about-inner,
+  .landing-about-card > div > div:last-child {
+    text-align: center;
+  }
+
+  .landing-about-section .landing-about-card {
+    margin-top: 40px !important;
+  }
+
+  /* Mobile menu link hover */
+  .landing-mobile-menu a:active {
+    background: var(--accent-subtle) !important;
+  }
+
   /* Testimonials */
   .landing-test-grid {
     grid-template-columns: 1fr !important;
@@ -313,6 +395,22 @@
    SMALL MOBILE — 480px and below
    ============================================================ */
 @media (max-width: 480px) {
+  .landing-nav-inner {
+    padding: 8px 10px !important;
+  }
+
+  .toast-container {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(68px + var(--safe-bottom)) !important;
+  }
+
+  .notification-panel {
+    left: 6px !important;
+    right: 6px !important;
+    top: calc(48px + var(--safe-top)) !important;
+  }
+
   .responsive-grid {
     grid-template-columns: 1fr;
     gap: 16px;

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Mic, MicOff, Volume2 } from "lucide-react";
 
 const CAT_KEYWORDS = {
-  "Food & Dining": ["food", "eat", "lunch", "dinner", "breakfast", "canteen", "restaurant", "chai", "khana", "snack", "biryani", "roti", "pizza", "burger", "shawarma", "kfc", "mcdonald", "samosa", "tea", "coffee", "milk", "grocery", "fruit", "vegetable"],
+  "Food & Dining": ["food", "eat", "lunch", "dinner", "breakfast", "canteen", "restaurant", "snack", "pizza", "burger", "shawarma", "kfc", "mcdonald", "tea", "coffee", "milk", "grocery", "fruit", "vegetable"],
   "Transportation": ["transport", "bus", "rickshaw", "uber", "taxi", "fare", "travel", "petrol", "fuel", "ride", "auto", "bike", "car", "indriver", "bykea", "train", "metro"],
   "Education": ["book", "books", "stationery", "pen", "pencil", "copies", "notebook", "library", "study", "notes", "fee", "tuition", "course", "exam", "university", "college", "school"],
   "Health & Fitness": ["medicine", "medical", "health", "doctor", "pharmacy", "hospital", "tablet", "paracetamol", "treatment", "clinic", "gym", "fitness", "vitamin", "dentist"],

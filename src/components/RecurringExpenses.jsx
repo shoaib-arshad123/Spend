@@ -3,12 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { formatPKR } from "../utils/helpers";
 import { Plus, Trash2, ToggleLeft, ToggleRight, CalendarDays, RefreshCw, ChevronLeft } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4444/api";
-const authHeaders = (token) => ({
-  "Content-Type": "application/json",
-  ...(token ? { Authorization: `Bearer ${token}` } : {})
-});
+import { recurringApi } from "../services/supabaseApi";
 
 const FREQ_OPTIONS = [
   { value: "daily", label: "Daily", icon: "📅" },
@@ -39,10 +34,7 @@ export default function RecurringExpenses({ setActiveTab }) {
   const handleCreate = async () => {
     if (!form.amount || !form.category) return pushToast({ type: "warning", message: "Amount and category required" });
     try {
-      const res = await fetch(`${API_URL}/recurring`, {
-        method: "POST", headers: authHeaders(token), body: JSON.stringify({ ...form, amount: Number(form.amount) })
-      });
-      const data = await res.json();
+      const data = await recurringApi.create({ ...form, amount: Number(form.amount) });
       if (data.success) {
         setRecurring(prev => [...prev, data.recurring]);
         setForm({ amount: "", category: "", description: "", frequency: "monthly", startDate: new Date().toISOString().slice(0, 10) });
@@ -55,7 +47,7 @@ export default function RecurringExpenses({ setActiveTab }) {
 
   const handleDelete = async (id) => {
     try {
-      await fetch(`${API_URL}/recurring/${id}`, { method: "DELETE", headers: authHeaders(token) });
+      await recurringApi.delete(id);
       setRecurring(prev => prev.filter(r => r.id !== id));
       pushToast({ type: "warning", message: "Subscription removed" });
     } catch (err) { pushToast({ type: "danger", message: "Failed to delete" }); }
@@ -63,10 +55,7 @@ export default function RecurringExpenses({ setActiveTab }) {
 
   const handleToggle = async (item) => {
     try {
-      await fetch(`${API_URL}/recurring/${item.id}`, {
-        method: "PUT", headers: authHeaders(token),
-        body: JSON.stringify({ ...item, isActive: !item.isActive })
-      });
+      await recurringApi.update(item.id, { ...item, isActive: !item.isActive });
       setRecurring(prev => prev.map(r => r.id === item.id ? { ...r, isActive: !r.isActive } : r));
       pushToast({ type: "info", message: `${item.description || item.category} ${item.isActive ? "paused" : "resumed"}` });
     } catch (err) { pushToast({ type: "danger", message: "Failed to update" }); }
@@ -105,10 +94,7 @@ export default function RecurringExpenses({ setActiveTab }) {
     const nextDate = calculateNextDate(item.nextDueDate, item.frequency);
     const today = new Date().toISOString().slice(0, 10);
     try {
-      await fetch(`${API_URL}/recurring/${item.id}`, {
-        method: "PUT", headers: authHeaders(token),
-        body: JSON.stringify({ ...item, nextDueDate: nextDate, lastPaidDate: today })
-      });
+      await recurringApi.update(item.id, { ...item, nextDueDate: nextDate, lastPaidDate: today });
       await refreshRecurring();
       pushToast({ type: "success", message: "Bill marked as paid!" });
     } catch (err) {
@@ -120,8 +106,7 @@ export default function RecurringExpenses({ setActiveTab }) {
 
   const handleProcessDue = async () => {
     try {
-      const res = await fetch(`${API_URL}/recurring/process`, { method: "POST", headers: authHeaders(token) });
-      const data = await res.json();
+      const data = await recurringApi.processDue();
       if (data.success && data.processed > 0) {
         pushToast({ type: "success", message: `✅ ${data.processed} recurring expense(s) processed!` });
         await refreshRecurring();

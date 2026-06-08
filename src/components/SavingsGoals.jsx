@@ -3,12 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { formatPKR } from "../utils/helpers";
 import { Plus, Trash2, Target, TrendingUp, Sparkles, ChevronLeft } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4444/api";
-const authHeaders = (token) => ({
-  "Content-Type": "application/json",
-  ...(token ? { Authorization: `Bearer ${token}` } : {})
-});
+import { goalsApi } from "../services/supabaseApi";
 
 const GOAL_CATEGORIES = [
   { value: "Emergency Fund", icon: "🛡️" },
@@ -55,11 +50,7 @@ export default function SavingsGoals({ setActiveTab }) {
   const handleCreate = async () => {
     if (!form.name || !form.targetAmount) return pushToast({ type: "warning", message: "Name and target amount required" });
     try {
-      const res = await fetch(`${API_URL}/goals`, {
-        method: "POST", headers: authHeaders(token),
-        body: JSON.stringify({ ...form, targetAmount: Number(form.targetAmount), deadline: form.deadline || null })
-      });
-      const data = await res.json();
+      const data = await goalsApi.create({ ...form, targetAmount: Number(form.targetAmount), deadline: form.deadline || null });
       if (data.success) {
         setGoals(prev => [...prev, data.goal]);
         setForm({ name: "", targetAmount: "", category: "Other", icon: "🎯", deadline: "" });
@@ -74,11 +65,7 @@ export default function SavingsGoals({ setActiveTab }) {
     const amt = Number(addAmount);
     if (!amt || amt <= 0) return pushToast({ type: "warning", message: "Enter a valid amount" });
     try {
-      const res = await fetch(`${API_URL}/goals/${goalId}/savings`, {
-        method: "PUT", headers: authHeaders(token),
-        body: JSON.stringify({ amount: amt })
-      });
-      const data = await res.json();
+      const data = await goalsApi.addSavings(goalId, amt);
       if (data.success) {
         setGoals(prev => prev.map(g => g.id === goalId ? data.goal : g));
         setAddingTo(null);
@@ -111,7 +98,7 @@ export default function SavingsGoals({ setActiveTab }) {
 
   const handleDelete = async (id) => {
     try {
-      await fetch(`${API_URL}/goals/${id}`, { method: "DELETE", headers: authHeaders(token) });
+      await goalsApi.delete(id);
       setGoals(prev => prev.filter(g => g.id !== id));
       pushToast({ type: "warning", message: "Goal removed" });
     } catch (err) { pushToast({ type: "danger", message: "Failed to delete" }); }

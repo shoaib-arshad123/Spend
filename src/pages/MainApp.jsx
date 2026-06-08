@@ -17,7 +17,7 @@ import CelebrationPopup from "../components/CelebrationPopup";
 import { DashboardSkeleton, PageSkeleton, HistorySkeleton, AnalyticsSkeleton, AddExpenseSkeleton, ProfileSkeleton, RewardsSkeleton } from "../components/SkeletonLoader";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { classifyUser, formatPKR } from "../utils/helpers";
-import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Globe, Bell, LogOut, Repeat, Target, MoreHorizontal, MoreVertical, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, PieChart as PieChartIcon, Plus, History, Lightbulb, Trophy, User as UserIcon, Menu, X, Sun, Moon, Bell, LogOut, Repeat, Target, MoreHorizontal, MoreVertical, ShieldCheck } from "lucide-react";
 
 
 const NAV = [
@@ -228,7 +228,7 @@ export default function MainApp({ tab = "dashboard" }) {
             </motion.button>
 
             {/* Notifications */}
-            <div style={{ position:"relative" }}>
+            <div style={{ position:"relative" }} className="notification-wrapper">
               <motion.button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="app-icon-btn">
                 <Bell size={16} />
                 {unreadCount > 0 && (
