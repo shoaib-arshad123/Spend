@@ -28,6 +28,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0,10));
   const [source, setSource] = useState("manual");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedExpense, setSavedExpense] = useState(null);
 
   const timeStr = new Date().toTimeString().slice(0,5);
 
@@ -54,6 +55,7 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
     try {
       const result = await onAdd({ amount:Number(amount), category, description:note.trim(), date:selectedDate, source });
       if (result && result.success) {
+        setSavedExpense({ amount: Number(amount), category, description: note.trim() });
         setSuccess(true);
         setAmount(""); setNote(""); setCategory(getAutoCategory()); setError("");
         setTimeout(() => { setSuccess(false); setActiveTab("dashboard"); }, 1500);
@@ -287,21 +289,30 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
               exit={{ opacity:0 }}
               style={AE.savingOverlay}
             >
-              <motion.div style={AE.savingCard}>
-                <motion.div
-                  animate={{ rotate:360 }}
-                  transition={{ duration:1.2, repeat:Infinity, ease:"linear" }}
-                  style={{ fontSize:36 }}
-                >💾</motion.div>
-                <p style={{ margin:"10px 0 0", fontWeight:800, color:"var(--text-primary)", fontSize:16 }}>Saving Expense...</p>
+              <motion.div
+                style={AE.savingCard}
+                initial={{ opacity:0, y:18, scale:0.96 }}
+                animate={{ opacity:1, y:0, scale:1 }}
+                exit={{ opacity:0, y:12, scale:0.98 }}
+                transition={{ type:"spring", damping:22, stiffness:260 }}
+              >
+                <div style={AE.spinnerWrap}>
+                  <motion.div
+                    style={AE.spinnerRing}
+                    animate={{ rotate:360 }}
+                    transition={{ duration:1, repeat:Infinity, ease:"linear" }}
+                  />
+                  <Plus size={18} color="var(--accent)" />
+                </div>
+                <p style={{ margin:"14px 0 0", fontWeight:800, color:"var(--text-primary)", fontSize:16 }}>Saving expense</p>
                 <div style={AE.savingBar}>
                   <motion.div
                     style={AE.savingBarFill}
-                    animate={{ width:["0%","70%","100%"] }}
-                    transition={{ duration:1.5, ease:"easeInOut" }}
+                    animate={{ x:["-100%","20%","100%"] }}
+                    transition={{ duration:1.2, repeat:Infinity, ease:"easeInOut" }}
                   />
                 </div>
-                <p style={{ margin:"4px 0 0", fontSize:11, color:"var(--text-muted)" }}>Syncing with server...</p>
+                <p style={{ margin:"6px 0 0", fontSize:11, color:"var(--text-muted)" }}>Syncing securely...</p>
               </motion.div>
             </motion.div>
           )}
@@ -312,18 +323,37 @@ export default function AddExpense({ t, lang, onAdd, setActiveTab }) {
               exit={{ opacity:0 }}
               style={AE.savingOverlay}
             >
-              <motion.div style={AE.savingCard}>
-                <motion.span 
-                  animate={{ scale:[1,1.4,1], rotate:[0,15,-15,0] }} 
-                  transition={{ duration:0.6 }} 
-                  style={{ fontSize:48, display:"block" }}
-                >🎉</motion.span>
-                <p style={{ margin:"12px 0 0", fontWeight:800, color:"var(--green)", fontSize:18 }}>Expense Added!</p>
-                <p style={{ margin:"4px 0 0", fontSize:12, color:"var(--text-muted)" }}>Redirecting to dashboard...</p>
+              <motion.div
+                style={AE.successCard}
+                initial={{ opacity:0, y:22, scale:0.94 }}
+                animate={{ opacity:1, y:0, scale:1 }}
+                exit={{ opacity:0, y:-10, scale:0.98 }}
+                transition={{ type:"spring", damping:20, stiffness:260 }}
+              >
                 <motion.div
-                  style={{ width:40, height:4, background:"var(--green)", borderRadius:4, marginTop:10 }}
-                  animate={{ width:[40,120,40] }}
-                  transition={{ duration:1, repeat:Infinity }}
+                  style={AE.successRing}
+                  initial={{ scale:0.6, opacity:0 }}
+                  animate={{ scale:1, opacity:1 }}
+                  transition={{ type:"spring", damping:16, stiffness:320 }}
+                >
+                  <CheckCircle2 size={34} color="var(--green)" />
+                </motion.div>
+                <motion.div
+                  style={AE.receiptPreview}
+                  initial={{ opacity:0, y:12 }}
+                  animate={{ opacity:1, y:0 }}
+                  transition={{ delay:0.12, duration:0.28 }}
+                >
+                  <span style={AE.receiptLabel}>Expense added</span>
+                  <strong style={AE.receiptAmount}>PKR {Number(savedExpense?.amount || 0).toLocaleString()}</strong>
+                  <span style={AE.receiptMeta}>{savedExpense?.category || category}</span>
+                </motion.div>
+                <p style={{ margin:"12px 0 0", fontSize:12, color:"var(--text-muted)" }}>Updating your dashboard...</p>
+                <motion.div
+                  style={AE.successProgress}
+                  initial={{ scaleX:0 }}
+                  animate={{ scaleX:1 }}
+                  transition={{ duration:1.25, ease:[0.25, 0.46, 0.45, 0.94] }}
                 />
               </motion.div>
             </motion.div>
@@ -488,15 +518,47 @@ const AE = {
   },
   savingCard: {
     background:"var(--bg-card)", border:"1px solid var(--border)",
-    borderRadius:24, padding:"32px 40px", textAlign:"center",
+    borderRadius:18, padding:"28px 34px", textAlign:"center",
     boxShadow:"var(--shadow-lg)", minWidth:240
+  },
+  successCard: {
+    background:"var(--bg-card)", border:"1px solid var(--border)",
+    borderRadius:20, padding:"24px", textAlign:"center",
+    boxShadow:"var(--shadow-lg)", width:"min(320px, calc(100vw - 32px))"
+  },
+  spinnerWrap: {
+    width:54, height:54, borderRadius:"50%", margin:"0 auto",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    position:"relative", background:"var(--accent-subtle)"
+  },
+  spinnerRing: {
+    position:"absolute", inset:0, borderRadius:"50%",
+    border:"2px solid transparent", borderTopColor:"var(--accent)",
+    borderRightColor:"var(--accent)"
+  },
+  successRing: {
+    width:62, height:62, borderRadius:"50%", margin:"0 auto 14px",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    background:"var(--green-bg)", border:"1px solid rgba(16,185,129,0.28)"
+  },
+  receiptPreview: {
+    background:"var(--bg-input)", border:"1px solid var(--border)",
+    borderRadius:14, padding:"14px 16px", display:"flex",
+    flexDirection:"column", gap:3
+  },
+  receiptLabel: { fontSize:11, color:"var(--text-muted)", fontWeight:800, textTransform:"uppercase", letterSpacing:"0.08em" },
+  receiptAmount: { fontSize:22, color:"var(--text-primary)", letterSpacing:"-0.5px" },
+  receiptMeta: { fontSize:12, color:"var(--accent)", fontWeight:700 },
+  successProgress: {
+    height:4, width:"100%", background:"linear-gradient(90deg, var(--green), var(--accent))",
+    borderRadius:4, marginTop:14, transformOrigin:"left"
   },
   savingBar: {
     width:"100%", height:4, background:"var(--border)",
-    borderRadius:4, overflow:"hidden", marginTop:12
+    borderRadius:4, overflow:"hidden", marginTop:14
   },
   savingBarFill: {
-    height:"100%", background:"linear-gradient(90deg, var(--accent), var(--accent-hover))",
+    width:"70%", height:"100%", background:"linear-gradient(90deg, transparent, var(--accent), transparent)",
     borderRadius:4
   },
   

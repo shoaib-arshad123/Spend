@@ -11,6 +11,9 @@ const getUserId = async () => {
   return user.id;
 };
 
+const isAuthEmailVerified = (authUser) =>
+  Boolean(authUser?.email_confirmed_at || authUser?.confirmed_at || authUser?.email_verified);
+
 const formatProfile = (profile, authUser) => ({
   id: profile.id,
   email: profile.email || authUser?.email,
@@ -21,7 +24,7 @@ const formatProfile = (profile, authUser) => ({
   avatar: profile.avatar || '🧑‍💻',
   photo: profile.photo || null,
   phone: profile.phone || null,
-  isEmailVerified: profile.is_email_verified === true,
+  isEmailVerified: profile.is_email_verified === true || isAuthEmailVerified(authUser),
   isPhoneVerified: profile.is_phone_verified === true,
 });
 
@@ -84,6 +87,15 @@ const mapGoal = (row) => ({
   isCompleted: row.is_completed === true,
   createdAt: row.created_at,
 });
+
+const calculateNextDate = (current, freq) => {
+  const d = new Date(current);
+  if (freq === 'daily') d.setDate(d.getDate() + 1);
+  else if (freq === 'weekly') d.setDate(d.getDate() + 7);
+  else if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (freq === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+};
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -164,9 +176,30 @@ const ensureProfile = async (userId, email, name) => {
   throw new Error('Profile could not be created. Please try signing in.');
 };
 
+const syncVerifiedEmail = async (profile, authUser) => {
+  if (!profile || !isAuthEmailVerified(authUser) || profile.is_email_verified === true) {
+    return profile;
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ is_email_verified: true, updated_at: new Date().toISOString() })
+    .eq('id', profile.id)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.warn('syncVerifiedEmail:', error.message);
+    return profile;
+  }
+
+  return data || { ...profile, is_email_verified: true };
+};
+
 const buildAuthUser = async (session, authUser, email, name) => {
   try {
-    const profile = await ensureProfile(authUser.id, email, name || authUser.user_metadata?.name);
+    let profile = await ensureProfile(authUser.id, email, name || authUser.user_metadata?.name);
+    profile = await syncVerifiedEmail(profile, authUser);
     return ok({
       token: session.access_token,
       user: formatProfile(profile, authUser),
@@ -222,11 +255,12 @@ export const authApi = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { success: false, message: 'No session' };
     try {
-      const profile = await ensureProfile(
+      let profile = await ensureProfile(
         session.user.id,
         session.user.email,
         session.user.user_metadata?.name
       );
+      profile = await syncVerifiedEmail(profile, session.user);
       return ok({
         token: session.access_token,
         user: formatProfile(profile, session.user),
@@ -280,7 +314,8 @@ export const authApi = {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) return fail('Invalid token');
     try {
-      const profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      let profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      profile = await syncVerifiedEmail(profile, user);
       return ok({ user: formatProfile(profile, user) });
     } catch (err) {
       return fail(err.message || 'Profile not found');
@@ -545,7 +580,8 @@ export const profileApi = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return fail('Invalid token');
     try {
-      const profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      let profile = await ensureProfile(user.id, user.email, user.user_metadata?.name);
+      profile = await syncVerifiedEmail(profile, user);
       return ok({ user: formatProfile(profile, user) });
     } catch (err) {
       return fail(err.message || 'Profile not found');
@@ -736,29 +772,58 @@ export const recurringApi = {
     if (error) return fail('Failed to process');
 
     let processed = 0;
+    let skipped = 0;
+
     for (const item of dueItems || []) {
-      await supabase.from('expenses').insert({
-        user_id: userId,
-        amount: item.amount,
-        category: item.category,
-        description: `[Recurring] ${item.description || ''}`,
-        date: item.next_due_date,
-      });
+      const dueDate = String(item.next_due_date).slice(0, 10);
+      const lastPaidDate = item.last_paid_date ? String(item.last_paid_date).slice(0, 10) : null;
+      const nextDueDate = calculateNextDate(dueDate, item.frequency);
 
-      const d = new Date(item.next_due_date);
-      if (item.frequency === 'daily') d.setDate(d.getDate() + 1);
-      else if (item.frequency === 'weekly') d.setDate(d.getDate() + 7);
-      else if (item.frequency === 'monthly') d.setMonth(d.getMonth() + 1);
-      else if (item.frequency === 'yearly') d.setFullYear(d.getFullYear() + 1);
+      if (lastPaidDate && lastPaidDate >= dueDate) {
+        const { error: updatePaidError } = await supabase.from('recurring_expenses').update({
+          next_due_date: nextDueDate,
+          updated_at: new Date().toISOString(),
+        }).eq('id', item.id).eq('user_id', userId);
+        if (updatePaidError) return fail('Failed to update subscription');
+        skipped++;
+        continue;
+      }
 
-      await supabase.from('recurring_expenses').update({
-        next_due_date: d.toISOString().slice(0, 10),
+      const description = `Bill Paid: ${item.description || item.category}`;
+      const { data: existing, error: existingError } = await supabase
+        .from('expenses')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('description', description)
+        .gte('date', dueDate)
+        .lte('date', today)
+        .limit(1);
+      if (existingError) return fail('Failed to verify payment status');
+
+      if (!existing?.length) {
+        const { error: insertError } = await supabase.from('expenses').insert({
+          user_id: userId,
+          amount: item.amount,
+          category: item.category,
+          description,
+          date: today,
+          source: 'subscription',
+        });
+        if (insertError) return fail('Failed to record payment');
+        processed++;
+      } else {
+        skipped++;
+      }
+
+      const { error: updateError } = await supabase.from('recurring_expenses').update({
+        next_due_date: nextDueDate,
+        last_paid_date: today,
         updated_at: new Date().toISOString(),
-      }).eq('id', item.id);
-
-      processed++;
+      }).eq('id', item.id).eq('user_id', userId);
+      if (updateError) return fail('Failed to update subscription');
     }
-    return ok({ processed });
+
+    return ok({ processed, skipped });
   },
 };
 

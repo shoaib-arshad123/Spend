@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -555,8 +555,19 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
         </div>
         {recent.length === 0 ? (
           <EmptyState icon="📭" title="No expenses yet" desc="Add your first expense to see it here" action="➕ Add Expense" onAction={() => setActiveTab("addExpense")} />
-        ) : recent.map(exp => (
-          <div key={exp.id} style={D.recentRow} className="dashboard-recent-row">
+        ) : (
+          <AnimatePresence initial={false}>
+            {recent.map((exp, i) => (
+          <motion.div
+            key={exp.id}
+            layout
+            initial={{ opacity:0, y:12, scale:0.98 }}
+            animate={{ opacity:1, y:0, scale:1 }}
+            exit={{ opacity:0, y:-8, scale:0.98 }}
+            transition={{ type:"spring", damping:24, stiffness:320, delay: i < 3 ? i * 0.03 : 0 }}
+            style={D.recentRow}
+            className="dashboard-recent-row"
+          >
             <div style={{ ...D.recentIcon, background:"var(--bg-elevated)" }} className="dashboard-recent-icon">
               <span style={{ fontSize:18 }}>{getIcon(exp.category)}</span>
             </div>
@@ -565,8 +576,10 @@ export default function Dashboard({ t, budget, setBudget, setActiveTab }) {
               <p style={D.recentMeta}>{`TXN-${exp.id}`} · {new Date(exp.date).toLocaleDateString()} · {new Date(exp.createdAt || exp.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
             <span style={D.recentAmt} className="dashboard-recent-amt">−{formatPKR(exp.amount)}</span>
-          </div>
-        ))}
+          </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
       </TiltCard>
 
       {/* Celebration Popup moved to MainApp.jsx */}

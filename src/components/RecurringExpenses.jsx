@@ -26,7 +26,7 @@ const calculateNextDate = (current, freq) => {
 };
 
 export default function RecurringExpenses({ setActiveTab }) {
-  const { token, categories, pushToast, pushNotification, isLoading: appLoading, addExpense, expenses, recurring, setRecurring, refreshRecurring } = useApp();
+  const { categories, pushToast, pushNotification, isLoading: appLoading, addExpense, expenses, refreshExpenses, recurring, setRecurring, refreshRecurring } = useApp();
   const [processingId, setProcessingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ amount: "", category: "", description: "", frequency: "monthly", startDate: new Date().toISOString().slice(0, 10) });
@@ -61,24 +61,37 @@ export default function RecurringExpenses({ setActiveTab }) {
     } catch (err) { pushToast({ type: "danger", message: "Failed to update" }); }
   };
 
-  const calculateNextDate = (current, freq) => {
-    const d = new Date(current);
-    if (freq === "daily") d.setDate(d.getDate() + 1);
-    else if (freq === "weekly") d.setDate(d.getDate() + 7);
-    else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
-    else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  };
-
   const handlePayNow = async (item) => {
     if (processingId) return;
     setProcessingId(item.id);
 
-    const success = await addExpense({
+    const today = new Date().toISOString().slice(0, 10);
+    const paymentDescription = `Bill Paid: ${item.description || item.category}`;
+    const alreadyPaid = (item.lastPaidDate && item.lastPaidDate >= item.nextDueDate) ||
+      expenses.some(e =>
+        e.description === paymentDescription &&
+        e.date >= item.nextDueDate &&
+        e.date <= today
+      );
+
+    if (alreadyPaid) {
+      try {
+        const nextDate = calculateNextDate(item.nextDueDate, item.frequency);
+        await recurringApi.update(item.id, { ...item, nextDueDate: nextDate, lastPaidDate: item.lastPaidDate || today });
+        await refreshRecurring();
+        pushToast({ type: "info", message: "This billing cycle is already paid." });
+      } catch (err) {
+        pushToast({ type: "danger", message: "Failed to update subscription" });
+      }
+      setProcessingId(null);
+      return;
+    }
+
+    const result = await addExpense({
       amount: item.amount,
       category: item.category,
-      description: `Bill Paid: ${item.description || item.category}`,
-      date: new Date().toISOString().slice(0, 10)
+      description: paymentDescription,
+      date: today
     }, { 
       title: "Bill Paid! ✅", 
       message: `Successfully paid PKR ${item.amount.toLocaleString()} for ${item.description || item.category}.`, 
@@ -86,13 +99,12 @@ export default function RecurringExpenses({ setActiveTab }) {
       icon: "💳" 
     });
 
-    if (!success) {
+    if (!result?.success) {
       setProcessingId(null);
       return;
     }
 
     const nextDate = calculateNextDate(item.nextDueDate, item.frequency);
-    const today = new Date().toISOString().slice(0, 10);
     try {
       await recurringApi.update(item.id, { ...item, nextDueDate: nextDate, lastPaidDate: today });
       await refreshRecurring();
@@ -109,6 +121,10 @@ export default function RecurringExpenses({ setActiveTab }) {
       const data = await recurringApi.processDue();
       if (data.success && data.processed > 0) {
         pushToast({ type: "success", message: `✅ ${data.processed} recurring expense(s) processed!` });
+        await refreshRecurring();
+        await refreshExpenses();
+      } else if (data.success && data.skipped > 0) {
+        pushToast({ type: "info", message: "Due subscriptions were already paid." });
         await refreshRecurring();
       } else {
         pushToast({ type: "info", message: "No due recurring expenses today" });

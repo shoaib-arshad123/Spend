@@ -86,9 +86,14 @@ export function LoginPage({ onBack, onSwitchToRegister, onSwitchToForgot }) {
     if (!form.email) return setError("Please enter your email.");
     if (!form.password) return setError("Please enter your password.");
     setError(""); setLoading(true);
-    try { await login(form.email.trim(), form.password); }
-    catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    try {
+      await login(form.email.trim(), form.password);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (initLoading) return <PageSkeleton />;

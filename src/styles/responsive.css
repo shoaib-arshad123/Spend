@@ -162,17 +162,21 @@
     right: 10px !important;
     width: auto !important;
     max-width: none !important;
-    border-radius: 14px !important;
+    max-height: calc(100dvh - 76px - var(--safe-bottom)) !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .notification-header {
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     gap: 8px !important;
+    padding: 12px !important;
   }
 
   .notification-actions {
-    width: 100% !important;
     justify-content: flex-end !important;
+    min-width: 0 !important;
   }
 
   .notif-action-btn {
@@ -180,14 +184,24 @@
     padding: 4px 8px !important;
   }
 
+  .notification-list {
+    max-height: none !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
   .notification-item {
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
   }
 
   .notification-time {
-    width: 100% !important;
+    width: auto !important;
     text-align: right !important;
-    margin-top: 4px !important;
+    margin-top: 1px !important;
   }
 
   /* Responsive grid tighter on tablet */
@@ -429,6 +443,23 @@
     left: 6px !important;
     right: 6px !important;
     top: calc(48px + var(--safe-top)) !important;
+  }
+
+  .notification-header {
+    align-items: flex-start !important;
+  }
+
+  .notification-actions {
+    gap: 3px !important;
+  }
+
+  .notification-item {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .notification-time {
+    grid-column: 2 !important;
+    text-align: left !important;
   }
 
   .responsive-grid {

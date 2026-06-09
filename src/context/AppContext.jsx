@@ -68,9 +68,11 @@ export function AppProvider({ children }) {
   const [unlockedBadges, setUnlockedBadges] = useState(() =>
     JSON.parse(localStorage.getItem("sset_unlocked_badges") || "[]")
   );
-  const hasNotifiedSubs = useRef(false);
-  const hasNotifiedGoals = useRef(false);
   const processingSubsRef = useRef(new Set());
+  const toastDedupeRef = useRef(new Map());
+  const notificationDedupeRef = useRef(new Map());
+  const lastNotificationSoundAtRef = useRef(0);
+  const badgeBaselineReadyRef = useRef(false);
   const audioCtxRef = useRef(null);
 
   const ensureAudioContext = () => {
@@ -182,10 +184,34 @@ export function AppProvider({ children }) {
     }
   }, [user, token]);
 
+  const refreshExpenses = useCallback(async () => {
+    if (!user || !token) return;
+    try {
+      const expData = await expenseApi.getAll();
+      if (expData.success) {
+        const mappedExpenses = (expData.expenses || []).map(e => ({
+          ...e,
+          amount: Number(e.amount),
+          date: e.date ? String(e.date).slice(0, 10) : e.date,
+          isHidden: e.isHidden === true
+        }));
+        setExpenses(mappedExpenses);
+      }
+    } catch (err) {
+      console.error("Error fetching expenses:", err);
+    }
+  }, [user, token]);
+
   // Toasts - must be before logout, refreshRecurring, refreshGoals
   const pushToast = useCallback((toast) => {
+    const now = Date.now();
+    const key = `${toast.type || "info"}:${toast.message || ""}`;
+    const lastShown = toastDedupeRef.current.get(key) || 0;
+    if (toast.dedupe !== false && now - lastShown < 1400) return;
+    toastDedupeRef.current.set(key, now);
+
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { ...toast, id }]);
+    setToasts(prev => [...prev.slice(-2), { ...toast, id }]);
 
     if (toast.type === "success") {
       triggerHaptic("success");
@@ -199,16 +225,35 @@ export function AppProvider({ children }) {
     setTimeout(() => setToasts(prev => prev.filter(x => x.id !== id)), 3800);
   }, [triggerHaptic, playTone]);
 
-  const pushNotification = useCallback((notif) => {
+  const pushNotification = useCallback((notif, options = {}) => {
+    const {
+      dedupeKey,
+      dedupeMs = 5000,
+      persist = true,
+      sound = true,
+      haptic = true,
+      desktop = false,
+    } = options;
+
+    const dedupeId = dedupeKey || `${notif.type || "info"}:${notif.title || ""}:${notif.message || ""}`;
+    const nowMs = Date.now();
+    const lastShown = notificationDedupeRef.current.get(dedupeId) || 0;
+    if (dedupeMs > 0 && nowMs - lastShown < dedupeMs) return null;
+    notificationDedupeRef.current.set(dedupeId, nowMs);
+
     const now = new Date().toISOString();
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const n = { ...notif, id: tempId, createdAt: now, time: now, read: false, isRead: false };
 
     setNotifications(prev => [n, ...prev].slice(0, 60));
-    playNotificationSound();
-    triggerHaptic(notif.type || "success");
 
-    if (token) {
+    if (sound && Date.now() - lastNotificationSoundAtRef.current > 900) {
+      lastNotificationSoundAtRef.current = Date.now();
+      playNotificationSound();
+    }
+    if (haptic) triggerHaptic(notif.type || "success");
+
+    if (persist && token) {
       notificationApi.create(notif)
         .then(data => {
           if (data.success && data.notification) {
@@ -222,23 +267,15 @@ export function AppProvider({ children }) {
         .catch(err => console.error("Network error during notification sync:", err));
     }
 
-    if (typeof window !== "undefined" && "Notification" in window) {
+    if (desktop && typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "granted") {
         new Notification(n.title || "SpendSmart", {
           body: n.message,
           icon: "/logo.png"
         });
-      } else if (Notification.permission === "default") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            new Notification(n.title || "SpendSmart", {
-              body: n.message,
-              icon: "/logo.png"
-            });
-          }
-        });
       }
     }
+    return n;
   }, [playNotificationSound, token, triggerHaptic]);
 
   const logout = useCallback(() => {
@@ -247,8 +284,15 @@ export function AppProvider({ children }) {
     setToken(null);
     setExpenses([]);
     setBudgetState(0);
+    setDefaultBudget(0);
+    setBudgetHistory([]);
+    setRecurring([]);
+    setGoals([]);
+    setDueSubscriptions(0);
     setNotifications([]);
     setCategories([]);
+    badgeBaselineReadyRef.current = false;
+    processingSubsRef.current.clear();
     pushToast({ type: "info", message: "Logged out successfully." });
   }, [pushToast]);
 
@@ -329,19 +373,22 @@ export function AppProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const data = await authApi.login(email, password);
     if (!data.success) throw new Error(data.message);
+    setIsLoading(true);
     setToken(data.token);
     setUser(data.user);
-    pushNotification({ title: "Welcome back!", message: `Hi ${data.user.name}, you are successfully logged in.`, type: "success", icon: "👋" });
+    badgeBaselineReadyRef.current = false;
     pushToast({ type: "success", message: `Welcome back, ${data.user.name}!` });
     return data;
-  }, [pushToast, pushNotification]);
+  }, [pushToast]);
 
   const register = useCallback(async (name, email, password) => {
     const data = await authApi.register(name, email, password);
     if (!data.success) throw new Error(data.message || "Registration failed");
+    setIsLoading(true);
     setToken(data.token);
     setUser(data.user);
     setShowOnboarding(true);
+    badgeBaselineReadyRef.current = false;
     pushNotification({
       title: "Welcome to SpendSmart! 🚀",
       message: `Hi ${data.user.name}, we're excited to help you save more. Start by setting your monthly budget in Profile!`,
@@ -457,8 +504,6 @@ export function AppProvider({ children }) {
       // Expense saved successfully - update local state immediately
       setExpenses(prev => [{ ...exp, id: data.expense?.id || Date.now(), amount: Number(exp.amount) }, ...prev]);
       pushToast({ type: "success", message: `✅ PKR ${Number(exp.amount).toLocaleString()} added!` });
-      playNotificationSound();
-      triggerHaptic("success");
 
       // One notification per expense (saved to database via pushNotification)
       if (customNotification) {
@@ -512,7 +557,7 @@ export function AppProvider({ children }) {
       pushToast({ type: "danger", message: "Failed to save expense. Check your connection." });
       return { success: false, message: "Network error. Please try again." };
     }
-  }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic, playNotificationSound]);
+  }, [user, token, expenses, budget, pushToast, pushNotification, refreshBudget, logout, triggerHaptic]);
 
   const deleteExpense = useCallback(async (id) => {
     const expense = expenses.find(e => e.id === id);
@@ -662,7 +707,7 @@ export function AppProvider({ children }) {
   }, [user, pushToast, pushNotification]);
 
   const markAllRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
     if (token) {
       notificationApi.markRead().catch(console.error);
     }
@@ -721,19 +766,34 @@ export function AppProvider({ children }) {
       // Auto-close celebration after 4 seconds
       setTimeout(() => setCelebrationReward(null), 4000);
     }
-  }, [expenses, budget, unlockedBadges, pushNotification, playJingle]);
+  }, [user, expenses, budget, unlockedBadges, pushNotification, playJingle]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = useMemo(
+    () => notifications.filter(n => !(n.isRead === true || n.read === true)).length,
+    [notifications]
+  );
 
   const [currentMonthKey, setCurrentMonthKey] = useState(() => getLocalMonthKey());
+  const [currentDateKey, setCurrentDateKey] = useState(() => getLocalDateKey());
 
   useEffect(() => {
     const interval = setInterval(() => {
       const key = getLocalMonthKey();
+      const dateKey = getLocalDateKey();
       setCurrentMonthKey(prev => (prev !== key ? key : prev));
+      setCurrentDateKey(prev => (prev !== dateKey ? dateKey : prev));
     }, 60_000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const today = currentDateKey;
+    const dueCount = recurring.filter(item => {
+      if (!item.isActive || !item.nextDueDate || item.nextDueDate > today) return false;
+      return !(item.lastPaidDate && item.lastPaidDate >= item.nextDueDate);
+    }).length;
+    setDueSubscriptions(dueCount);
+  }, [recurring, currentDateKey]);
 
   const monthlyExpenses = useMemo(() =>
     expenses.filter(e => e.date && e.date.startsWith(currentMonthKey) && (e.isHidden === 0 || e.isHidden === false || !e.isHidden)),
@@ -808,6 +868,96 @@ export function AppProvider({ children }) {
     [monthlyBreakdown]
   );
 
+  const loadUserData = useCallback(async ({ isCurrent = () => true } = {}) => {
+    setIsLoading(true);
+
+    try {
+      const [
+        expData,
+        catData,
+        budData,
+        histData,
+        notifData,
+        profData,
+        recurData,
+        goalData,
+      ] = await Promise.all([
+        expenseApi.getAll(),
+        categoryApi.getAll(),
+        budgetApi.get(),
+        budgetApi.getHistory(),
+        notificationApi.getAll(),
+        profileApi.get(),
+        recurringApi.getAll(),
+        goalsApi.getAll(),
+      ]);
+
+      if (!isCurrent()) return;
+
+      if (expData.success) {
+        setExpenses((expData.expenses || []).map(e => ({
+          ...e,
+          amount: Number(e.amount),
+          date: e.date ? String(e.date).slice(0, 10) : e.date,
+          isHidden: e.isHidden === true
+        })));
+      } else if (expData.message === "Invalid token") {
+        logout();
+        return;
+      }
+
+      setCategories(catData.success ? mergeCategories(catData.categories || []) : mergeCategories([]));
+
+      if (budData.success) {
+        setBudgetState(budData.budget || 0);
+        setDefaultBudget(budData.defaultBudget || 0);
+      }
+
+      if (histData.success) setBudgetHistory(histData.history || []);
+
+      if (notifData.success) {
+        setNotifications((notifData.notifications || []).map(n => ({
+          ...n,
+          isRead: n.isRead === true || n.read === true,
+          read: n.isRead === true || n.read === true,
+        })));
+      }
+
+      if (profData.success && profData.user) {
+        setUser(prev => ({ ...(prev || {}), ...profData.user }));
+      }
+
+      if (recurData.success) {
+        setRecurring((recurData.recurring || []).map(r => ({
+          ...r,
+          amount: Number(r.amount),
+          isActive: r.isActive === true || r.isActive === 1
+        })));
+      } else if (recurData.message === "Invalid token") {
+        logout();
+        return;
+      }
+
+      if (goalData.success) {
+        setGoals((goalData.goals || []).map(g => ({
+          ...g,
+          targetAmount: Number(g.targetAmount),
+          savedAmount: Number(g.savedAmount),
+          isCompleted: g.isCompleted === true || g.isCompleted === 1
+        })));
+      } else if (goalData.message === "Invalid token") {
+        logout();
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      if ((err?.message || "").toLowerCase().includes("not authenticated")) {
+        logout();
+      }
+    } finally {
+      if (isCurrent()) setIsLoading(false);
+    }
+  }, [logout]);
+
   // Restore Supabase session on load
   useEffect(() => {
     authApi.getSession().then((data) => {
@@ -834,143 +984,48 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!user || !token) {
       setIsLoading(false);
+      badgeBaselineReadyRef.current = false;
       return;
     }
 
     let isMounted = true;
-
-    const fetchAllData = async () => {
-      try {
-        const expData = await expenseApi.getAll();
-        if (isMounted && expData.success) {
-          const mappedExpenses = (expData.expenses || []).map(e => ({
-            ...e,
-            amount: Number(e.amount),
-            date: e.date ? e.date.slice(0, 10) : e.date,
-            isHidden: e.isHidden === true
-          }));
-          setExpenses(mappedExpenses);
-
-          const today = getLocalDateKey();
-          const lastExpenseAlert = localStorage.getItem("last_expense_alert");
-          if (mappedExpenses.length > 0 && lastExpenseAlert !== today) {
-            const hasExpenseToday = mappedExpenses.some(e => e.date && e.date.startsWith(today.slice(0, 10)));
-            if (!hasExpenseToday && new Date().getHours() >= 18) {
-              localStorage.setItem("last_expense_alert", today);
-              pushNotification({ title: "Track Your Spending 💸", message: "You haven't recorded any expenses today. Keep your budget up to date!", type: "warning", icon: "📝" });
-            }
-          }
-        } else if (expData.message === 'Invalid token') logout();
-
-        const catData = await categoryApi.getAll();
-        if (isMounted && catData.success) {
-          setCategories(mergeCategories(catData.categories || []));
-        } else if (isMounted) {
-          setCategories(mergeCategories([]));
-        }
-
-        const budData = await budgetApi.get();
-        if (isMounted && budData.success) {
-          setBudgetState(budData.budget || 0);
-          setDefaultBudget(budData.defaultBudget || 0);
-        }
-
-        const histData = await budgetApi.getHistory();
-        if (isMounted && histData.success) setBudgetHistory(histData.history || []);
-
-        const notifData = await notificationApi.getAll();
-        if (isMounted && notifData.success) setNotifications(notifData.notifications || []);
-
-        const profData = await profileApi.get();
-        if (isMounted && profData.success && profData.user) {
-          setUser(prev => ({ ...prev, ...profData.user }));
-        }
-
-        const recurData = await recurringApi.getAll();
-        if (isMounted && recurData.success) {
-          setRecurring((recurData.recurring || []).map(r => ({
-            ...r,
-            amount: Number(r.amount),
-            isActive: r.isActive === true
-          })));
-        } else if (recurData.message === 'Invalid token') logout();
-
-        const goalData = await goalsApi.getAll();
-        if (isMounted && goalData.success) {
-          const mappedGoals = (goalData.goals || []).map(g => ({
-            ...g,
-            targetAmount: Number(g.targetAmount),
-            savedAmount: Number(g.savedAmount),
-            isCompleted: g.isCompleted === true
-          }));
-          setGoals(mappedGoals);
-
-          const today = getLocalDateKey();
-          const lastGoalNotif = localStorage.getItem("last_notified_goals");
-          if (mappedGoals.length > 0 && lastGoalNotif !== today) {
-            const activeGoals = mappedGoals.filter(g => !g.isCompleted);
-            if (activeGoals.length > 0) {
-              const urgent = activeGoals.filter(g => {
-                if (!g.deadline) return false;
-                const daysLeft = Math.ceil((new Date(g.deadline) - new Date()) / (1000 * 60 * 60 * 24));
-                return daysLeft > 0 && daysLeft <= 7 && g.savedAmount < g.targetAmount;
-              });
-              if (urgent.length > 0) {
-                localStorage.setItem("last_notified_goals", today);
-                pushNotification({ title: "Goal Deadline Approaching ⏳", message: `You have ${urgent.length} goal(s) due within a week. Keep saving!`, type: "warning", icon: "🎯" });
-              } else {
-                const stagnant = activeGoals.filter(g => (g.savedAmount || 0) === 0);
-                if (stagnant.length > 0) {
-                  localStorage.setItem("last_notified_goals", today);
-                  pushNotification({ title: "Start Saving 🎯", message: `You have ${stagnant.length} goals with no progress. Make your first contribution!`, type: "info", icon: "💰" });
-                }
-              }
-            }
-          }
-        } else if (goalData.message === 'Invalid token') logout();
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    fetchAllData();
+    loadUserData({ isCurrent: () => isMounted });
     return () => { isMounted = false; };
-  }, [token]);
+  }, [loadUserData, token, user?.id]);
 
   // Auto-process subscriptions
   useEffect(() => {
-    if (!recurring.length || !expenses.length || !token || !budget) return;
-    const today = getLocalDateKey();
+    if (isLoading || !recurring.length || !token || effectiveMonthlyBudget <= 0) return;
+    const today = currentDateKey;
 
     recurring.forEach(item => {
-      if (item.isActive && item.nextDueDate <= today && !processingSubsRef.current.has(item.id)) {
-        const isPaid = item.lastPaidDate && item.lastPaidDate >= item.nextDueDate;
-        if (!isPaid) {
+      if (!item.isActive || !item.nextDueDate || item.nextDueDate > today) return;
+      if (processingSubsRef.current.has(item.id)) return;
+
+      const paymentDescription = `Bill Paid: ${item.description || item.category}`;
+      const isPaid = item.lastPaidDate && item.lastPaidDate >= item.nextDueDate;
+      const alreadyRecorded = expenses.some(e =>
+        e.description === paymentDescription &&
+        e.date >= item.nextDueDate &&
+        e.date <= today
+      );
+
+      const processSubscription = async () => {
+        processingSubsRef.current.add(item.id);
+        const nextDue = calculateNextDate(item.nextDueDate, item.frequency);
+
+        try {
+          if (isPaid || alreadyRecorded) {
+            await recurringApi.update(item.id, { ...item, nextDueDate: nextDue, lastPaidDate: item.lastPaidDate || today });
+            await refreshRecurring();
+            return;
+          }
+
           const totalSpentForMonth = expenses
             .filter(e => e.date && e.date.startsWith(today.slice(0, 7)))
-            .reduce((s, e) => s + e.amount, 0);
+            .reduce((s, e) => s + Number(e.amount), 0);
 
-          if (totalSpentForMonth + Number(item.amount) <= effectiveMonthlyBudget) {
-            processingSubsRef.current.add(item.id);
-            const nextDue = calculateNextDate(item.nextDueDate, item.frequency);
-
-            addExpense({
-              amount: Number(item.amount),
-              category: item.category,
-              description: `Bill Paid: ${item.description || item.category}`,
-              date: today
-            }, {
-              title: "Auto-Payment Done",
-              message: `Paid PKR ${item.amount} for ${item.description || item.category}.`,
-              type: "success", icon: "✅"
-            });
-
-            recurringApi.update(item.id, { ...item, nextDueDate: nextDue, lastPaidDate: today }).then(() => {
-              recurringApi.getAll().then(d => { if (d.success) setRecurring(d.recurring); });
-            });
-          } else {
+          if (totalSpentForMonth + Number(item.amount) > effectiveMonthlyBudget) {
             const lastAlert = localStorage.getItem(`budget_alert_${item.id}`);
             if (lastAlert !== today) {
               localStorage.setItem(`budget_alert_${item.id}`, today);
@@ -978,36 +1033,52 @@ export function AppProvider({ children }) {
                 title: "Low Budget: Payment Paused",
                 message: `Subscription for ${item.description || item.category} is pending.`,
                 type: "danger", icon: "⚠️"
-              });
+              }, { dedupeKey: `subscription-budget-${item.id}-${today}`, dedupeMs: 86_400_000 });
             }
+            return;
           }
+
+          const result = await addExpense({
+            amount: Number(item.amount),
+            category: item.category,
+            description: paymentDescription,
+            date: today
+          }, {
+            title: "Auto-Payment Done",
+            message: `Paid PKR ${Number(item.amount).toLocaleString()} for ${item.description || item.category}.`,
+            type: "success", icon: "✅"
+          });
+
+          if (result?.success) {
+            await recurringApi.update(item.id, { ...item, nextDueDate: nextDue, lastPaidDate: today });
+            await refreshRecurring();
+          }
+        } catch (err) {
+          console.error("Auto-payment failed:", err);
+        } finally {
+          processingSubsRef.current.delete(item.id);
         }
-      }
+      };
+
+      processSubscription();
     });
-  }, [recurring, expenses, budget, token, addExpense, pushNotification, effectiveMonthlyBudget]);
+  }, [isLoading, recurring, expenses, token, addExpense, pushNotification, effectiveMonthlyBudget, currentDateKey, refreshRecurring]);
 
   // Check for badge unlocks whenever expenses or budget changes
   useEffect(() => {
-    checkBadgeUnlocks();
-  }, [expenses, budget, checkBadgeUnlocks]);
-
-  // Auto-request notification permissions after a brief delay if not already requested
-  useEffect(() => {
-    if (user && typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        const timer = setTimeout(() => {
-          requestNotificationPermission();
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
+    if (!user || isLoading) return;
+    if (!badgeBaselineReadyRef.current) {
+      badgeBaselineReadyRef.current = true;
+      return;
     }
-  }, [user, requestNotificationPermission]);
+    checkBadgeUnlocks();
+  }, [user, isLoading, expenses, budget, checkBadgeUnlocks]);
 
   return (
     <AppContext.Provider value={{
       theme, toggleTheme, accent, setAccent, lang, setLang,
       user, setUser, logout, updateProfile, login, register, token,
-      expenses, addExpense, deleteExpense, editExpense, clearAllExpenses, clearMonthExpenses,
+      expenses, refreshExpenses, addExpense, deleteExpense, editExpense, clearAllExpenses, clearMonthExpenses,
       monthlyExpenses, monthlySpent, allTimeTotal, daysSinceFirstExpense, totalTrackingDays,
       previousMonthCarryOver, effectiveMonthlyBudget, monthlyRemaining, monthlyBreakdown, allTimeBudget: allTimeBudgetVal, budgetHistory,
       budget, setBudget, defaultBudget, setDefaultBudget,

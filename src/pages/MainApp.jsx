@@ -60,7 +60,7 @@ export default function MainApp({ tab = "dashboard" }) {
       const timer = setTimeout(() => {
         setPageLoading(false);
         prevTabRef.current = tab;
-      }, 450); // Slightly longer for better visibility of content-matched skeletons
+      }, 160);
       return () => clearTimeout(timer);
     }
   }, [tab]);
@@ -232,7 +232,13 @@ export default function MainApp({ tab = "dashboard" }) {
               <motion.button style={ms.iconBtn} onClick={() => setShowNotif(!showNotif)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="app-icon-btn">
                 <Bell size={16} />
                 {unreadCount > 0 && (
-                  <span style={{
+                  <motion.span
+                    key={unreadCount}
+                    initial={{ scale: 0.7, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.7, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 24 }}
+                    style={{
                     position: "absolute", top: -2, right: -2,
                     background: "var(--red)", color: "white",
                     fontSize: 9, fontWeight: "bold",
@@ -241,7 +247,7 @@ export default function MainApp({ tab = "dashboard" }) {
                     border: "1px solid var(--bg-card)"
                   }}>
                     {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
+                  </motion.span>
                 )}
               </motion.button>
               <AnimatePresence>
@@ -280,8 +286,8 @@ export default function MainApp({ tab = "dashboard" }) {
           </motion.div>
         )}
 
-        {/* Email verification warning */}
-        {user && !user.isEmailVerified && activeTab !== "profile" && (
+        {/* Email verification warning - only show if not yet verified */}
+        {user && !user?.isEmailVerified && activeTab !== "profile" && (
           <motion.div
             initial={{ opacity:0, y:-10 }}
             animate={{ opacity:1, y:0 }}

@@ -53,23 +53,26 @@ const nTypeStyle = {
 };
 
 export function NotificationCenter({ onClose }) {
-  const { notifications, markAllRead, clearNotifications, requestNotificationPermission } = useApp();
+  const { notifications, unreadCount, markAllRead, clearNotifications, requestNotificationPermission } = useApp();
   const [tab, setTab] = useState("all");
-  const [notifPermission, setNotifPermission] = useState(window.Notification?.permission || "default");
+  const [notifPermission, setNotifPermission] = useState(
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "denied"
+  );
 
   useEffect(() => {
-    // Automatically mark as read when the user opens the panel
-    if (notifications.some(n => !n.isRead)) {
-      markAllRead();
-    }
-  }, [markAllRead, notifications.length]); // Only run when count changes or on mount
+    if (unreadCount === 0) return;
+    const timer = setTimeout(() => markAllRead(), 350);
+    return () => clearTimeout(timer);
+  }, [markAllRead, unreadCount]);
 
   const handleEnable = async () => {
     const granted = await requestNotificationPermission();
     if (granted) setNotifPermission("granted");
   };
 
-  const shown = tab === "unread" ? notifications.filter(n => !n.isRead) : notifications;
+  const shown = tab === "unread"
+    ? notifications.filter(n => !(n.isRead === true || n.read === true))
+    : notifications;
 
   return (
     <motion.div
@@ -84,6 +87,7 @@ export function NotificationCenter({ onClose }) {
         <h3 style={NC.title}>
           <Bell size={16} style={{ marginRight:6, verticalAlign:"middle" }} />
           <span style={{ verticalAlign:"middle" }}>Notifications</span>
+          {unreadCount > 0 && <span style={NC.countPill}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
         </h3>
         <div style={{ display:"flex", gap:6, flexShrink:0 }} className="notification-actions">
           <motion.button style={NC.actionBtn} onClick={markAllRead} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="notif-action-btn">Mark read</motion.button>
@@ -98,7 +102,7 @@ export function NotificationCenter({ onClose }) {
           </motion.button>
         ))}
       </div>
-      <div style={NC.list}>
+      <div style={NC.list} className="notification-list">
         {notifPermission === "default" && (
           <div style={NC.permissionBox}>
             <p style={{ margin:"0 0 8px", fontSize:12, color:"var(--text-primary)" }}>Enable desktop alerts to never miss a budget warning.</p>
@@ -109,15 +113,25 @@ export function NotificationCenter({ onClose }) {
           <div style={NC.empty}><div style={{ display:"flex", justifyContent:"center", marginBottom:10 }}><Bell size={32} color="var(--text-muted)" /></div><p style={{ margin:0 }}>No notifications</p></div>
         ) : shown.map(n => {
           const s = nTypeStyle[n.type] || nTypeStyle.info;
+          const isRead = n.isRead === true || n.read === true;
           return (
-            <div key={n.id} className="notification-item" style={{ ...NC.item, background: n.isRead ? "transparent" : s.bg, borderLeft:`3px solid ${n.isRead ? "transparent" : s.color}` }}>
-              <span style={{ fontSize:16, flexShrink:0 }}>{n.icon}</span>
+            <motion.div
+              key={n.id}
+              layout
+              initial={{ opacity:0, y:8 }}
+              animate={{ opacity:1, y:0 }}
+              exit={{ opacity:0, y:-6 }}
+              transition={{ duration:0.18 }}
+              className="notification-item"
+              style={{ ...NC.item, background: isRead ? "transparent" : s.bg, borderLeft:`3px solid ${isRead ? "transparent" : s.color}` }}
+            >
+              <span style={{ fontSize:16, flexShrink:0 }}>{n.icon || "•"}</span>
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={NC.itemTitle}>{n.title}</p>
                 <p style={NC.itemMsg}>{n.message}</p>
               </div>
               <span style={NC.itemTime} className="notification-time">{timeAgo(n.time)}</span>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -126,9 +140,10 @@ export function NotificationCenter({ onClose }) {
 }
 
 const NC = {
-  panel:     { position:"absolute", top:"calc(100% + 10px)", right:0, width:360, background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:16, boxShadow:"var(--shadow-lg)", zIndex:200, overflow:"hidden" },
+  panel:     { position:"absolute", top:"calc(100% + 10px)", right:0, width:360, background:"var(--bg-card)", border:"1px solid var(--border)", borderRadius:14, boxShadow:"var(--shadow-lg)", zIndex:200, overflow:"hidden" },
   header:    { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", borderBottom:"1px solid var(--border-light)" },
-  title:     { margin:0, fontSize:14, fontWeight:700, color:"var(--text-primary)" },
+  title:     { margin:0, fontSize:14, fontWeight:700, color:"var(--text-primary)", display:"flex", alignItems:"center", gap:4 },
+  countPill: { minWidth:18, height:18, borderRadius:9, background:"var(--red)", color:"#fff", fontSize:10, fontWeight:800, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 5px", marginLeft:4 },
   actionBtn: { background:"transparent", border:"none", color:"var(--text-muted)", fontSize:11, cursor:"pointer", padding:"3px 6px" },
   tabs:      { display:"flex", padding:"8px 12px", gap:4, borderBottom:"1px solid var(--border-light)" },
   tab:       { padding:"5px 12px", background:"transparent", border:"1px solid transparent", color:"var(--text-muted)", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:500 },
