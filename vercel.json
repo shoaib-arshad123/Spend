@@ -1,11 +1,5 @@
 {
   "rewrites": [
-    /*
-      Rewrite only requests that do NOT look like static asset requests.
-      The pattern below skips any path containing a dot (file extension),
-      so files like manifest.json, *.js, *.css, images, etc. are served
-      directly instead of being rewritten to index.html.
-    */
     { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
   ]
 }
